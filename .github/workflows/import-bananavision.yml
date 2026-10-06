@@ -1,0 +1,85 @@
+name: Import BananaVision project
+
+on:
+  push:
+    paths:
+      - "banana-listo*.zip"
+      - "banana-listo (1).zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-project:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Locate uploaded ZIP
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="$(find . -maxdepth 1 -type f \( -name 'banana-listo*.zip' -o -name 'banana-listo (1).zip' \) -print -quit)"
+          if [ -z "$ZIP" ]; then
+            echo "No BananaVision ZIP found in repository root."
+            exit 1
+          fi
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Extract validated project
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .import-bananavision
+          mkdir -p .import-bananavision
+          unzip -q "${{ steps.locate.outputs.zip }}" -d .import-bananavision
+
+          if [ -d ".import-bananavision/banana" ]; then
+            SRC=".import-bananavision/banana"
+          else
+            SRC=".import-bananavision"
+          fi
+
+          # Copy the audited project into the repository root.
+          # Preserve Git metadata and this import workflow.
+          rsync -a             --exclude '.git/'             --exclude '.github/'             "$SRC"/ ./
+
+          rm -rf .import-bananavision
+          rm -f "${{ steps.locate.outputs.zip }}"
+
+      - name: Safety checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f README.md
+          test -f .gitignore
+          test -f .python-version
+          test -f app.py
+          test -f bakend/model/banana.keras
+          test -f Modelo/model.json
+          test -f Modelo/weights.bin
+          test -f frontend/index.html
+          test ! -f bakend/.env
+          test ! -d .venv
+          test ! -d node_modules
+
+      - name: Commit imported project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Import BananaVision AI v1.0.0 [skip ci]"
+          git push
