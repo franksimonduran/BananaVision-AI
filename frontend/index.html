@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#083c31">
+  <meta name="description" content="BananaVision AI: evaluación visual de plátanos para exportación, con avisos de voz en los rechazos, recomendaciones e historial.">
+  <title>Análisis · BananaVision AI</title>
+  <link rel="icon" href="assets/logo-icono.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/logo-icono.png">
+  <link rel="preload" href="assets/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=20261006-20">
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Ir al contenido</a>
+  <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M6 12h12"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v14H3Z"/><circle cx="12" cy="14" r="4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m3 17 6-6 4 4 3-3 5 5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 3C6 2 2 7 5 15c6 9 16 2 15-12ZM3 21 16 8"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15l4-5 4 3 6-8"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4ZM20 2v4m-2-2h4"/></symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="4"/><path d="M12 10v4m-2-2h4"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-12h-7Z"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m12 3 9 5v9l-9 5-9-5V8Zm-9 5 9 5 9-5m-9 5v9M7.5 5.5l9 5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  </svg>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard" aria-label="BananaVision AI, panel"><img class="brand-logo" src="assets/logo-icono.png" alt="" width="42" height="42"><span><strong>BananaVision <b>AI</b></strong><small>INTELIGENCIA VISUAL</small></span></a>
+      <div class="nav-caption">ESPACIO DE TRABAJO</div>
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a class="nav-item" href="#dashboard" data-view="dashboard" aria-label="Panel"><svg aria-hidden="true"><use href="#i-grid"/></svg><span>Panel</span></a>
+        <a class="nav-item active" href="#capturar" data-view="capturar" aria-current="page" aria-label="Análisis"><svg aria-hidden="true"><use href="#i-scan"/></svg><span>Análisis</span><span class="nav-new" aria-hidden="true">AI</span></a>
+        <a class="nav-item" href="#historial" data-view="historial" aria-label="Historial"><svg aria-hidden="true"><use href="#i-clock"/></svg><span>Historial</span><span id="navCount" class="nav-count">0</span></a>
+      </nav>
+      <div class="sidebar-insight"><img class="insight-banana" src="assets/banana.svg" alt="" width="200" height="114"><strong>Observa mejor.<br>Decide con criterio.</strong><p>Cada fotografía aporta una nueva perspectiva.</p><a href="#capturar">Analizar una muestra <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+      <div class="sidebar-bottom"><button class="nav-item" data-settings aria-label="Conexión y modelo"><svg aria-hidden="true"><use href="#i-settings"/></svg><span>Conexión y modelo</span></button><div class="local-label"><span id="sidebarStatusDot" class="dot"></span><span id="sidebarStatusText">Conectando…</span><span>v3.0</span></div></div>
+    </aside>
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="breadcrumb">Laboratorio <span aria-hidden="true">/</span> <strong id="pageName">Análisis</strong></div>
+        <div class="top-actions"><span id="todayLabel" class="today-label"></span><button id="connectionStatus" class="connection" title="Volver a comprobar la conexión"><span id="statusDot" class="dot"></span><span id="statusText">Conectando…</span></button><button class="icon-button" data-settings aria-label="Configurar conexión"><svg aria-hidden="true"><use href="#i-settings"/></svg></button><button id="openHelp" class="workspace-avatar" aria-label="Abrir guía de uso"><img class="workspace-logo" src="assets/logo-icono.png" alt="" width="34" height="34"><svg aria-hidden="true"><use href="#i-chevron"/></svg></button></div>
+      </header>
+      <main id="mainContent" tabindex="-1">
+        <div id="serviceBanner" class="service-banner" role="status" hidden><svg aria-hidden="true"><use href="#i-info"/></svg><div><strong>Revisemos la conexión</strong><p id="serviceMessage"></p></div><button id="retryConnection" class="button button-small button-outline">Comprobar</button></div>
+        <div id="notice" class="notice" role="status" hidden><span id="noticeText"></span><button id="dismissNotice" class="icon-button" aria-label="Cerrar aviso">×</button></div>
+        
+
+        <section id="view-dashboard" class="page-view" aria-labelledby="dashboardTitle" hidden>
+          <div class="page-heading"><div><span class="eyebrow">EVALUACIÓN VISUAL PARA EXPORTACIÓN</span><h1 id="dashboardTitle">Panel</h1><p>Una visión clara de tus plátanos y su clasificación para exportación.</p></div><a href="#capturar" class="button button-primary"><svg aria-hidden="true"><use href="#i-plus"/></svg>Nueva captura</a></div>
+          <div class="section-label"><h2>Resumen de resultados</h2><span>Historial local</span></div>
+          <section class="metric-grid" aria-label="Métricas del historial guardado">
+            <article class="metric-card"><div class="metric-top"><span>Muestras registradas</span><span class="metric-icon green"><svg aria-hidden="true"><use href="#i-scan"/></svg></span></div><strong id="dashTotal" class="metric-value">0</strong><div class="metric-bottom"><span id="sessionCount">0 en esta sesión</span><span class="metric-detail">TOTAL</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Resultados APTO</span><span class="metric-icon mint"><svg aria-hidden="true"><use href="#i-check"/></svg></span></div><strong id="dashApto" class="metric-value">0</strong><div class="metric-bottom"><span id="dashAptoShare">Sin muestras todavía</span><span class="metric-detail">VISUAL</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Confianza media</span><span class="metric-icon gold"><svg aria-hidden="true"><use href="#i-chart"/></svg></span></div><strong id="dashConfidence" class="metric-value">—</strong><div class="metric-bottom"><span>Puntuación del modelo</span><span class="metric-detail">MEDIA</span></div></article>
+            <article class="metric-card"><div class="metric-top"><span>Inferencia media</span><span class="metric-icon blue"><svg aria-hidden="true"><use href="#i-clock"/></svg></span></div><strong id="dashTime" class="metric-value">—</strong><div class="metric-bottom"><span>Tiempo de procesamiento</span><span class="metric-detail">MODELO</span></div></article>
+          </section>
+          <div class="chart-grid">
+            <section class="card activity-card" aria-labelledby="activityTitle"><div class="card-heading"><div><h2 id="activityTitle">Actividad de análisis</h2><p>Muestras por día en el historial guardado</p></div><label class="sr-only" for="activityPeriod">Periodo del gráfico de actividad</label><select id="activityPeriod" class="select-compact"><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select></div><div class="chart-summary"><strong id="activityTotal">0</strong><span>muestras en este periodo</span><span class="chart-key"><i></i> Análisis</span></div><div id="activityChart" class="chart-host"></div></section>
+            <section class="card distribution-card" aria-labelledby="distributionTitle"><div class="card-heading"><div><h2 id="distributionTitle">Clasificación visual</h2><p>Distribución de resultados guardados</p></div><span class="chart-heading-icon"><svg aria-hidden="true"><use href="#i-leaf"/></svg></span></div><div id="distributionChart" class="donut-host"></div><div id="distributionLegend" class="distribution-legend"></div></section>
+          </div>
+          <div class="dashboard-bottom-grid">
+            <section class="card confidence-card" aria-labelledby="confidenceTitle"><div class="card-heading"><div><h2 id="confidenceTitle">Evolución de confianza</h2><p>Últimas 12 lecturas · no equivale a precisión</p></div><span class="subtle-pill">0–100 %</span></div><div id="confidenceChart" class="chart-host confidence-host"></div></section>
+            <section class="card recent-card" aria-labelledby="recentTitle"><div class="card-heading"><div><h2 id="recentTitle">Últimas lecturas</h2><p>Lo más reciente en tu laboratorio</p></div><a href="#historial" class="text-link" aria-label="Ver todo el historial">Ver todo <span aria-hidden="true">↗</span></a></div><div id="recentReadings" class="recent-list"></div></section>
+          </div>
+          <div class="dashboard-note"><svg aria-hidden="true"><use href="#i-shield"/></svg><p>Resultados reales, almacenados en este navegador. La clasificación es una orientación visual y requiere revisión manual.</p></div>
+        </section>
+
+        <section id="view-capturar" class="page-view" aria-labelledby="capturePageTitle">
+          <div class="page-heading capture-heading">
+            <div><span class="eyebrow">INSPECCIÓN VISUAL</span><h1 id="capturePageTitle">Análisis</h1></div>
+            <div class="feature-grid" aria-label="Características del análisis">
+              <div class="feature-card"><span class="feature-icon"><svg aria-hidden="true"><use href="#i-sparkles"/></svg></span><div><strong>Análisis con IA</strong><p>Tecnología de visión computacional</p></div></div>
+              <div class="feature-card"><span class="feature-icon"><svg aria-hidden="true"><use href="#i-focus"/></svg></span><div><strong>Evaluación visual</strong><p>Confianza y probabilidades del modelo</p></div></div>
+              <div class="feature-card"><span class="feature-icon"><svg aria-hidden="true"><use href="#i-zap"/></svg></span><div><strong>Respuesta rápida</strong><p>Tu análisis y sus recomendaciones</p></div></div>
+            </div>
+          </div>
+          <div class="source-mode-selector" role="group" aria-label="Modo de análisis">
+            <button id="cameraMode" class="button source-mode-button" aria-pressed="true" aria-controls="captureSourcePanel"><svg aria-hidden="true"><use href="#i-camera"/></svg>Cámara en vivo</button>
+            <button id="imageMode" class="button source-mode-button" aria-pressed="false" aria-controls="captureSourcePanel"><svg aria-hidden="true"><use href="#i-image"/></svg>Análisis por imágenes</button>
+          </div>
+          <div id="captureSourcePanel" class="capture-layout">
+            <section class="card capture-card" aria-labelledby="captureTitle"><div class="card-heading"><div><h2 id="captureTitle">Tu muestra</h2></div></div>
+              <div id="cameraIdle" class="camera-idle"><span class="feature-icon"><svg aria-hidden="true"><use href="#i-camera"/></svg></span><h3 id="cameraIdleTitle">Inicia una inspección</h3><p id="cameraIdleDescription">Centra un solo plátano y utiliza una iluminación uniforme.</p><button id="startLiveCamera" class="button button-primary" disabled><svg aria-hidden="true"><use href="#i-camera"/></svg><span id="startLiveCameraText">Iniciar cámara en vivo</span></button><button id="selectImages" class="button button-primary" hidden><svg aria-hidden="true"><use href="#i-image"/></svg><span id="selectImagesText">Seleccionar imágenes</span></button><p class="drop-hint">O arrastra una imagen para analizarla.</p><small id="fileLimits">JPG, PNG o WebP · Hasta 5 MB por imagen</small><span class="upload-batch" id="batchLimits">Hasta 10 imágenes por lote</span></div>
+              <div id="stage" class="stage"><img id="preview" alt="Muestra seleccionada" hidden><video id="video" autoplay playsinline muted hidden aria-label="Cámara en directo"></video><div id="cropGuide" class="crop-guide" hidden><span id="cropGuideText">Área analizada</span></div><span id="previewTag" class="preview-tag" hidden></span><div id="overlay" class="overlay" hidden><span class="spinner"></span><strong>Analizando tu muestra</strong><span>Observando los detalles…</span></div></div>
+              <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple hidden><canvas id="canvas" hidden></canvas>
+              <div id="sampleSummary" class="capture-toolbar" hidden><img id="selectionThumbnail" alt="Miniatura de la muestra seleccionada" hidden><div class="selection-details"><span id="selectionText">Ninguna imagen seleccionada</span><small id="selectionMeta" hidden></small></div></div>
+              <div class="capture-actions">
+                <div id="cameraControls" class="camera-controls" hidden><label class="switch-label"><input id="realtime" type="checkbox"><span class="switch" aria-hidden="true"></span>Análisis continuo</label><button id="stopCamera" class="text-button">Detener cámara</button></div>
+                <div class="alert-controls"><label class="switch-label"><input id="voiceEnabled" type="checkbox" checked aria-describedby="voiceStatus"><span class="switch" aria-hidden="true"></span><svg aria-hidden="true"><use href="#i-bell"/></svg>Aviso de voz</label><p id="voiceStatus" role="status">Aviso para NO APTO · máximo cada 5 s</p></div>
+                <button id="analyzeButton" class="button button-primary analyze-button" disabled><svg aria-hidden="true"><use href="#i-scan"/></svg><span id="analyzeButtonText">Esperando conexión al modelo</span></button>
+              </div>
+
+              </section>
+            <section class="card result-card" aria-labelledby="resultTitle">
+              <div class="card-heading"><div><h2 id="resultTitle">Resultado y recomendaciones</h2></div></div>
+              <p id="resultAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+              <div id="readingPicker" class="reading-picker" hidden><label for="readingSelect">Seleccionar resultado del lote</label><select id="readingSelect"></select></div>
+              <div id="resultEmpty" class="result-empty"><div class="empty-scan"><svg aria-hidden="true"><use href="#i-scan"/></svg><span></span></div><h3>Esperando una muestra</h3><p>El resultado aparecerá aquí después del análisis.<br>Consulta la clasificación, la confianza y el siguiente paso.</p><div class="workflow"><span>Captura</span><i>→</i><span>Analiza</span><i>→</i><span>Revisa</span></div></div>
+              <div id="resultContent" hidden>
+                <div class="result-top">
+                  <figure class="result-sample"><div class="result-image"><img id="resultThumbnail" alt="Imagen que produjo esta lectura"><span class="image-caption"><svg aria-hidden="true"><use href="#i-scan"/></svg>MUESTRA ANALIZADA</span></div><figcaption><strong id="resultSource"></strong><span>Fotografía de esta lectura</span></figcaption></figure>
+                  <div id="classificationPanel" class="classification-panel">
+                    <span class="classification-caption">Clasificación del estado</span><h3 id="resultLabel" class="result-verdict"></h3><strong id="resultHeadline" class="result-headline"></strong>
+                    <div class="confidence-heading"><span>Confianza del análisis</span><strong id="confidenceValue"></strong></div>
+                    <div id="confidenceProgress" class="progress-track" role="progressbar" aria-label="Confianza del análisis" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="confidenceBar"></div><span id="thresholdMarker" title="Umbral requerido"></span></div>
+                    <p id="resultMessage" class="result-description"></p>
+                  </div>
+                </div>
+                <section class="recommendations" aria-labelledby="recommendationTitle"><dl class="result-metrics"><div><dt>Probabilidad APTO</dt><dd id="probApto"></dd></div><div><dt>Probabilidad NO APTO</dt><dd id="probNoApto"></dd></div><div><dt>Umbral mínimo</dt><dd id="thresholdValue"></dd></div><div><dt>Tiempo de inferencia</dt><dd id="inferenceTime"></dd></div></dl><div class="result-section-heading"><h3 id="recommendationTitle">Recomendaciones</h3><span>Del análisis a la acción</span></div><div class="recommendation-grid">
+                  <article class="recommendation-card"><span class="recommendation-icon"><svg aria-hidden="true"><use href="#i-arrow"/></svg></span><div><h4 id="recommendationOneTitle"></h4><p id="recommendationOneText"></p></div></article>
+                  <article class="recommendation-card"><span class="recommendation-icon"><svg aria-hidden="true"><use href="#i-shield"/></svg></span><div><h4 id="recommendationTwoTitle"></h4><p id="recommendationTwoText"></p></div></article>
+                </div><p id="resultDisclaimer" class="recommendation-note result-disclaimer"></p></section>
+              </div>
+              </section>
+          </div>
+          <section class="card rejection-section" aria-labelledby="rejectionTitle">
+            <div class="card-heading"><div><span class="eyebrow">REGISTRO AUTOMÁTICO DE LA CÁMARA</span><h2 id="rejectionTitle">Capturas no aptas <span id="rejectionCount" class="rejection-count">0</span></h2><p>Solo se conservan los fotogramas del modo continuo clasificados como NO APTO (máximo 200; se eliminan las más antiguas). APTO y NO CONCLUYENTE no guardan fotografías ni activan el aviso de voz.</p></div><button id="clearRejections" class="text-button danger-text" disabled>Borrar capturas</button></div>
+            <p id="rejectionEmpty" class="rejection-empty">No hay capturas rechazadas. Cuando la cámara detecte un NO APTO, aparecerá aquí.</p>
+            <div id="rejectionGallery" class="rejection-gallery"></div>
+            <div class="rejection-footer"><span id="rejectionCapacity">Cargando capturas guardadas…</span><button id="loadMoreRejections" class="button button-small button-outline" hidden>Mostrar más capturas</button></div>
+          </section>
+        </section>
+
+        <section id="view-historial" class="page-view" aria-labelledby="historyTitle" hidden>
+          <div class="page-heading"><div><span class="eyebrow">EVALUACIÓN VISUAL PARA EXPORTACIÓN</span><h1 id="historyTitle">Historial de análisis</h1><p>Explora, filtra y exporta las clasificaciones de tus plátanos para exportación.</p></div><button id="exportHistory" class="button button-primary" disabled><svg aria-hidden="true"><use href="#i-download"/></svg>Exportar CSV</button></div>
+          <section class="card history-card" aria-label="Resultados del historial"><div class="history-filters"><div class="search-field"><svg aria-hidden="true"><use href="#i-search"/></svg><label class="sr-only" for="historySearch">Buscar por nombre de muestra</label><input id="historySearch" type="search" placeholder="Buscar una muestra…" maxlength="200"></div><div class="filter-field"><label for="historyStatus">Clasificación</label><select id="historyStatus"><option value="">Todas las clases</option><option value="APTO">APTO</option><option value="NO APTO">NO APTO</option><option>NO CONCLUYENTE</option></select></div><div class="filter-field"><label for="historyDate">Fecha</label><input id="historyDate" type="date"></div><button id="resetFilters" class="text-button">Limpiar filtros</button></div><div class="history-results-heading"><span id="filteredCount" role="status">0 resultados</span><button id="clearHistory" class="text-button danger-text" disabled>Borrar historial</button></div><div class="table-scroll"><table><caption class="sr-only">Evaluaciones visuales para exportación guardadas en este navegador</caption><thead><tr><th scope="col">Muestra</th><th scope="col">Evaluación para exportación</th><th scope="col">Confianza</th><th scope="col">Inferencia</th><th scope="col">Fecha y hora</th></tr></thead><tbody id="historyBody"></tbody></table></div><div id="historyEmpty" class="history-empty"><span class="empty-history-icon"><svg aria-hidden="true"><use href="#i-clock"/></svg></span><h3 id="historyEmptyTitle">Tu historia empieza con una muestra</h3><p id="historyEmptyText">Los resultados aparecerán aquí después del primer análisis.</p><a href="#capturar" id="historyEmptyAction" class="button button-outline">Analizar una muestra <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div><div class="history-caption"><span>Guardado local · Evaluación visual preliminar para exportación</span><span id="historyCapacity">0 / 1000 registros</span></div></section>
+          <nav id="historyPagination" class="history-pagination" aria-label="Páginas del historial" hidden>
+            <button id="historyPrevious" class="button button-outline" disabled>Anterior</button>
+            <span id="historyPageStatus" role="status" aria-live="polite"></span>
+            <button id="historyNext" class="button button-outline" disabled>Siguiente</button>
+          </nav>
+        </section>
+        <footer class="page-footer"><span><img class="footer-logo" src="assets/logo-icono.png" alt="" width="16" height="16"><strong>BananaVision AI</strong> <span aria-hidden="true">·</span> INTELIGENCIA VISUAL</span><span>Observa con atención. Decide con criterio.</span></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="helpDialog" aria-labelledby="helpTitle"><form method="dialog"><button class="dialog-close icon-button" aria-label="Cerrar guía">×</button></form><img class="dialog-logo" src="assets/logo-icono.png" alt="" width="52" height="52"><span class="eyebrow">GUÍA DE BANANAVISION AI</span><h2 id="helpTitle">Una mejor imagen.<br>Una mejor lectura.</h2><ol><li>Utiliza luz uniforme y un fondo neutro.</li><li>Centra un solo plátano en el área marcada.</li><li>En Análisis, pulsa «Iniciar cámara en vivo» (el navegador pedirá permiso); también puedes arrastrar imágenes sobre el área de la muestra.</li><li>Revisa la clasificación, la confianza y las recomendaciones.</li><li>En Historial, pulsa una lectura para ver su fotografía y datos; también puedes exportar los resultados.</li></ol><p>«NO CONCLUYENTE» indica confianza inferior al umbral. El modelo solo distingue dos clases y puede equivocarse con objetos ajenos. Una puntuación alta no demuestra precisión ni detecta contaminación invisible.</p><div class="dialog-note">La cámara requiere localhost o HTTPS. Las imágenes se envían al servidor configurado. Las fotografías y recomendaciones de los nuevos análisis se conservan en este navegador junto con el historial.</div></dialog>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><form method="dialog"><button class="dialog-close icon-button" aria-label="Cerrar conexión">×</button></form><img class="dialog-logo" src="assets/logo-icono.png" alt="" width="52" height="52"><span class="eyebrow">TU ESPACIO DE INTELIGENCIA VISUAL</span><h2 id="settingsTitle">Conexión y modelo</h2><form id="settingsForm"><label for="apiUrl">Dirección del servidor</label><input id="apiUrl" type="url" placeholder="http://127.0.0.1:8000" required><p>Se utiliza el servidor que sirve esta página. Configura otra dirección si ejecutas la API por separado.</p><p id="settingsError" class="form-error" role="alert" hidden></p><button class="button button-primary" type="submit">Guardar y comprobar <svg aria-hidden="true"><use href="#i-arrow"/></svg></button></form><div id="modelDetails" class="model-details">Comprobando modelo…</div></dialog>
+  <dialog id="historyDetailDialog" class="history-detail-dialog" aria-labelledby="historyDetailTitle">
+    <form method="dialog"><button class="dialog-close icon-button" aria-label="Cerrar detalle de la muestra" autofocus>×</button></form>
+    <span class="eyebrow">HISTORIAL DE ANÁLISIS</span><h2 id="historyDetailTitle">Imagen y datos de la muestra</h2>
+    <div class="history-detail-layout">
+      <div class="history-detail-photo"><img id="historyDetailImage" alt="Fotografía de la muestra analizada" hidden><p id="historyDetailImageStatus" role="status">Imagen no disponible.</p></div>
+      <div><h3 id="historyDetailName" class="history-detail-name"></h3><span id="historyDetailLabel" class="badge"></span>
+        <dl class="history-detail-data"><div><dt>Fecha y hora</dt><dd id="historyDetailDate"></dd></div><div><dt>Confianza</dt><dd id="historyDetailConfidence"></dd></div><div><dt>Tiempo de análisis</dt><dd id="historyDetailTime"></dd></div></dl>
+      </div>
+    </div>
+    <section id="historyDetailRecommendations" aria-labelledby="historyDetailRecommendationTitle" hidden>
+      <div class="result-section-heading"><h3 id="historyDetailRecommendationTitle">Recomendaciones</h3></div>
+      <div class="recommendation-grid">
+        <article class="recommendation-card"><div><h4>Destino</h4><p id="historyDetailDestination"></p></div></article>
+        <article class="recommendation-card"><div><h4>Tiempo</h4><p id="historyDetailTiming"></p></div></article>
+        <article class="recommendation-card"><div><h4>Manejo</h4><p id="historyDetailStorage"></p></div></article>
+        <article class="recommendation-card"><div><h4>Acción</h4><p id="historyDetailAction"></p></div></article>
+      </div>
+      <p class="recommendation-note">Los plazos exactos dependen de la variedad, madurez y conservación.</p>
+    </section>
+    <form method="dialog" class="dialog-actions"><a id="historyDetailDownload" class="button button-outline" download hidden>Descargar imagen</a><button class="button button-outline">Cerrar</button></form>
+  </dialog>
+  <dialog id="clearHistoryDialog" aria-labelledby="clearHistoryTitle"><span class="eyebrow">HISTORIAL LOCAL</span><h2 id="clearHistoryTitle">¿Borrar las lecturas?</h2><p>Se eliminarán los resultados y fotografías del historial y se actualizará el panel. Las capturas no aptas de la galería se conservan. Puedes exportar los datos a CSV antes de continuar.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar historial</button><button class="button button-danger" value="clear">Borrar historial</button></form></dialog>
+  <dialog id="clearRejectionsDialog" aria-labelledby="clearRejectionsTitle"><h2 id="clearRejectionsTitle">¿Borrar las capturas no aptas?</h2><p>Se eliminarán las fotografías guardadas en este navegador. El historial de lecturas se conserva. Pausa el análisis en vivo para evitar nuevas capturas mientras borras.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar capturas</button><button class="button button-danger" value="clear">Borrar capturas</button></form></dialog>
+  <noscript><div class="noscript-message"><img src="assets/logo-icono.png" alt="" width="34" height="34"><span>BananaVision AI necesita JavaScript para analizar imágenes y mostrar tus resultados.</span></div></noscript>
+  <script type="module" src="app.js?v=20261006-18"></script>
+</body>
+</html>

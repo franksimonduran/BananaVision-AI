@@ -1,0 +1,15 @@
+{
+  "passed": [
+    "Responsive at 1440, 1024, 768, 390, 320 px; no document overflow",
+    "Real upload -> API -> model -> result -> history",
+    "Batch results preserve order and populate history",
+    "CSV exported with all three real results",
+    "History persists after reload; session counters reset",
+    "Invalid client file type has visible error",
+    "Help and connection dialogs work with real model metadata",
+    "Camera capture and continuous inference: no overlapping requests, camera released",
+    "Server error shown and analyze control recovers",
+    "History clears correctly"
+  ],
+  "pageErrors": []
+}

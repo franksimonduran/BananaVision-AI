@@ -1,0 +1,18 @@
+BANANAVISION AI — INTELIGENCIA VISUAL
+
+1. Extrae todo el ZIP.
+2. Necesitas Python 3.11 de 64 bits (también 3.10 o 3.12).
+3. Abre una terminal en esta carpeta y ejecuta: python app.py
+4. La primera vez instala las dependencias. Después abre http://127.0.0.1:8000.
+5. Mantén la ventana abierta; Ctrl+C para detener.
+
+No necesitas Node/npm, permisos de administrador, activar scripts PowerShell,
+archivos .bat ni .ps1. Para reparar una instalación anterior: python app.py --rebuild.
+Si tu equipo administrado bloquea programas, utiliza un entorno autorizado.
+No abras frontend/index.html con doble clic.
+
+Modelo reconstruido incluido, dashboard dinámico, captura con recomendaciones, historial y CSV.
+Lee README.md para la guía completa y docs/CAMBIOS_Y_VERIFICACION.md para las pruebas y capturas.
+
+La IA clasifica apariencia visual. La confianza no equivale a precisión comprobada.
+No se proporcionó un dataset de prueba; por eso no se presentan métricas inventadas.
