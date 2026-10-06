@@ -38,6 +38,32 @@ python -m uvicorn src.main:app --host 127.0.0.1 --port 8000
 
 Configuración opcional: copia `bakend/.env.example` a `bakend/.env` (no se sube al repositorio).
 
+## Despliegue
+
+El repositorio incluye un `Dockerfile` de producción preparado para servicios compatibles con contenedores, incluido Railway.
+
+En Railway:
+
+1. conecta este repositorio;
+2. despliega desde la rama `main`;
+3. Railway detectará automáticamente el `Dockerfile`;
+4. configura el health check en `/health`;
+5. genera un dominio público HTTPS.
+
+El contenedor ejecuta un único worker de Uvicorn, escucha en `0.0.0.0` y utiliza automáticamente la variable `PORT` proporcionada por la plataforma. No se necesita una base de datos para la versión actual: el historial se conserva en el navegador del usuario.
+
+Variables opcionales de producción:
+
+```text
+CONFIDENCE_THRESHOLD=0.7
+MAX_IMAGE_SIZE_MB=5
+MAX_BATCH_FILES=10
+MAX_BATCH_SIZE_MB=20
+MAX_IMAGE_PIXELS=20000000
+```
+
+La cámara web requiere HTTPS en producción.
+
 ## API
 
 | Endpoint | Descripción |
