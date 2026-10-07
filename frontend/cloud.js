@@ -1,4 +1,4 @@
-/** Same-origin, cookie-based cloud history. No session token in localStorage. */
+/** Private, same-origin cloud history. No login or token in localStorage. */
 export default class CloudClient {
   constructor() {
     this.images = new Map();
@@ -27,9 +27,7 @@ export default class CloudClient {
   }
 
   me() { return this.request('/me'); }
-  login(email, password) { return this.json('/login', { email, password }); }
-  register(email, password) { return this.json('/register', { email, password }); }
-  logout() { this.images.clear(); return this.request('/logout', { method: 'POST' }); }
+  anonymous() { return this.request('/anonymous', { method: 'POST' }); }
   history() { return this.request('/history'); }
   detail(id) { return this.request('/history/' + encodeURIComponent(id)); }
   clearHistory() { return this.request('/history', { method: 'DELETE' }); }

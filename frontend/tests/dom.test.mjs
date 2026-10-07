@@ -38,3 +38,18 @@ test('la cámara permite guardar una muestra manual sin almacenar todos los foto
   assert.match(app, /await analyze\(false\)/);
   assert.match(app, /data\.record_id/);
 });
+
+
+test('sistema sin login ni registros visibles: sesión privada automática por navegador', () => {
+  for (const legacyId of ['accountButton', 'logoutButton', 'accountDialog', 'accountForm']) {
+    assert.equal(known.has(legacyId), false, 'Se encontró una pantalla de inicio de sesión');
+  }
+  assert.match(app, /await cloud\.anonymous\(\)/);
+  assert.match(app, /state\.cloudInitializing/);
+});
+
+test('cada NO APTO del modo continuo se registra en el historial automáticamente', () => {
+  assert.match(app, /continuous && results\.some\(data => data\.label === 'NO APTO'\)/);
+  assert.match(app, /await refreshCloudHistory\(\)/);
+  assert.match(app, /await historyImages\.save\(rejected, state\.history\)/);
+});

@@ -4,16 +4,14 @@ Aplicación web de **evaluación visual asistida por IA** para plátanos: clasif
 
 ## Características
 
-- Análisis visual `APTO` / `NO APTO`, con probabilidades por clase, umbral mínimo y tiempo de inferencia.
-- Estado `NO CONCLUYENTE` cuando la confianza no alcanza el umbral (70 % por defecto).
-- Cámara en vivo (se inicia con el botón «Iniciar cámara en vivo») y carga o arrastre de imágenes, individuales o por lote.
-- Modo continuo: las lecturas automáticas no se cuentan como muestras nuevas ni se guardan en el historial; los `NO APTO` del modo continuo se conservan como capturas (máximo 200).
-- Modo invitado: historial local en el navegador, con filtros y exportación CSV.
-- Cuentas privadas: historial en PostgreSQL y fotografías reducidas en un bucket S3 privado; sincronización al iniciar sesión desde otro dispositivo.
-- Importación voluntaria del historial del navegador anterior; los datos locales originales se conservan.
-- Sesiones mediante cookie HttpOnly, contraseñas Argon2 y comprobación de origen para cambios autenticados.
-- Aviso de voz opcional para `NO APTO`.
-- API FastAPI + TensorFlow/Keras.
+- Análisis visual `APTO`, `NO APTO` o `NO CONCLUYENTE`, con probabilidades y tiempo de inferencia.
+- **Sin registro ni inicio de sesión.** Cada navegador obtiene automáticamente un identificador privado mediante una cookie HttpOnly.
+- **Todos los resultados NO APTO del análisis continuo se guardan automáticamente en el historial** con fotografía, confianza y fecha. Los fotogramas APTO y NO CONCLUYENTE del modo continuo no se registran.
+- La carga de imágenes y los análisis manuales siguen guardando sus resultados, independientemente de la clasificación.
+- Galería de las últimas 200 capturas NO APTO, filtros del historial y exportación CSV.
+- En Railway, PostgreSQL almacena los metadatos y un bucket privado almacena las fotografías. Sin `DATABASE_URL`, usa localStorage/IndexedDB.
+- Importación voluntaria del historial local previo, sin borrar los datos de origen.
+- Aviso de voz opcional para NO APTO. Cámara web solo tras autorización del usuario.
 
 ## Requisitos
 
@@ -45,9 +43,9 @@ Configuración opcional: copia `bakend/.env.example` a `bakend/.env` (no se sube
 
 El repositorio incluye un `Dockerfile` de producción preparado para servicios compatibles con contenedores, incluido Railway.
 
-### Cuentas, PostgreSQL y fotografías privadas
+### Historial automático privado, PostgreSQL y fotografías
 
-En Railway se utilizan un servicio **Postgres** y un bucket privado **BananaVisionPhotos**. La aplicación usa variables referenciadas, sin copiar las claves secretas al repositorio:
+En Railway se usa el servicio `Postgres` y el bucket privado `BananaVisionPhotos`. No se exponen contraseñas en GitHub. Variables necesarias:
 
 ```text
 DATABASE_URL=${{Postgres.DATABASE_URL}}
@@ -57,22 +55,21 @@ BV_S3_REGION=${{BananaVisionPhotos.REGION}}
 BV_S3_ACCESS_KEY=${{BananaVisionPhotos.ACCESS_KEY_ID}}
 BV_S3_SECRET_KEY=${{BananaVisionPhotos.SECRET_ACCESS_KEY}}
 PUBLIC_ORIGIN=https://bananavision-ai-production.up.railway.app
-BV_SIGNUP_ENABLED=true
+BV_ANONYMOUS_ONLY=true
+BV_SIGNUP_ENABLED=false
 ```
 
-**Uso:** crea una cuenta desde «Iniciar sesión» (contraseña mínima de 12 caracteres). Comprueba que tu correo aparezca en la barra superior y que el aviso diga «Guardado en la nube activado». Los análisis de imágenes y sus fotografías se guardan automáticamente en tu cuenta.
+**Uso sin cuentas:** abre la web, permite la cámara o sube una imagen y analiza. El servidor asigna automáticamente una sesión anónima con cookie privada por navegador. No hay formulario de registro ni inicio de sesión. Cada `NO APTO` detectado en cámara continua entra al historial automáticamente y puede consultarse con su fotografía. Una muestra manual también se guarda, incluso si es APTO o NO CONCLUYENTE.
 
-**Cámara:** al iniciar la cámara, el modo continuo realiza lecturas temporales, que no son muestras físicas distintas y no se agregan automáticamente al historial. Pulsa **«Guardar muestra en historial»** para detener el modo continuo, fotografiar y analizar una muestra concreta y guardarla en el historial (nube con sesión iniciada; navegador en modo local). Los fotogramas automáticos NO APTO se conservan por separado en la galería de capturas especiales (máximo 200).
+**Privacidad:** cada navegador tiene su propio historial; los visitantes de la URL pública no pueden acceder a fotografías ajenas. No equivale a sincronización entre dispositivos: sin cuenta, no existe forma de recuperar ese historial desde otro dispositivo y si se eliminan las cookies puede perderse la clave de acceso aunque los registros aún estén en PostgreSQL. La sesión anónima dura 365 días y se renueva al visitar la aplicación.
 
-Al guardar, la interfaz muestra un mensaje que distingue **guardado en la nube** de **guardado en este navegador**. Para consultar los resultados desde otro dispositivo, inicia sesión con la misma cuenta. Una pantalla de resultado no es una confirmación de guardado hasta recibir el aviso correspondiente.
+**Retención:** máximo 1.000 resultados en total por navegador, incluidos NO APTO automáticos. El sistema elimina los más antiguos y sus fotografías al superar el límite. La galería especial muestra las últimas 200 capturas NO APTO; el historial reúne las capturas automáticas y los análisis manuales. **Cada NO APTO automático consume almacenamiento**, por lo que una cámara que permanezca en modo continuo puede generar muchos registros; revisa los costes de Railway.
 
-**Datos existentes:** los resultados almacenados anteriormente en el navegador no se suben sin consentimiento. Tras iniciar sesión, abre Historial → «Importar historial local». La importación es idempotente para los registros que tengan identificador y conserva los originales del navegador.
+**Datos anteriores:** si este navegador ya tenía registros locales, utiliza «Importar historial local» para agregarlos a su historial privado en PostgreSQL sin eliminar los originales.
 
-**Límites:** máximo 1.000 análisis y 200 capturas automáticas NO APTO por cuenta; al superar los límites se eliminan los más antiguos, incluidas sus fotos. Las imágenes se convierten a JPEG reducido y se guardan en el bucket privado, no dentro de PostgreSQL.
+**Respaldo y seguridad:** las fotos se convierten a JPEG reducido, se guardan en el bucket privado y se entregan solo a su sesión anónima. Los tokens son cookies HttpOnly con atributo Secure en HTTPS y no se guardan en localStorage. No borres cookies ni uses modo incógnito para registros que necesites conservar. Configura copias de seguridad de PostgreSQL y una política de retención del bucket antes de usar el servicio con información importante.
 
-**Seguridad y operación:** los tokens de sesión solo viajan en cookies HttpOnly (Secure en HTTPS), expiran a los 14 días y no se guardan en localStorage. Se comprueba el origen de las escrituras autenticadas. El registro público puede cerrarse configurando `BV_SIGNUP_ENABLED=false` una vez creadas las cuentas necesarias. Actualmente no hay verificación de correo ni recuperación automática de contraseña; no se recomienda abrir el registro a usuarios desconocidos hasta añadirlas. Configura copias de seguridad para PostgreSQL y controla el consumo facturable de Postgres, el bucket y TensorFlow.
-
-Sin `DATABASE_URL`, el programa conserva su modo local: el inicio de sesión no está habilitado y el historial permanece en el navegador.
+Sin `DATABASE_URL` el historial funciona únicamente en el navegador y no está sincronizado con Railway.
 
 En Railway:
 
@@ -82,7 +79,7 @@ En Railway:
 4. configura el health check en `/health`;
 5. genera un dominio público HTTPS.
 
-El contenedor ejecuta un único worker de Uvicorn, escucha en `0.0.0.0` y utiliza automáticamente la variable `PORT` proporcionada por la plataforma. Cuando el usuario inicia sesión, PostgreSQL y el bucket permiten el historial privado sincronizado. Sin sesión, el historial se conserva localmente en el navegador.
+El contenedor ejecuta un único worker de Uvicorn, escucha en `0.0.0.0` y utiliza automáticamente `PORT`. PostgreSQL y el bucket permiten persistencia automática por navegador sin credenciales de usuario.
 
 Variables opcionales de producción:
 
@@ -100,19 +97,20 @@ La cámara web requiere HTTPS en producción.
 
 | Endpoint | Descripción |
 |---|---|
-| `GET /health` | Estado del servicio y del modelo |
+| `GET /health` | Estado del servicio, modelo y almacenamiento |
 | `GET /model/info` | Metadatos del modelo |
-| `POST /predict` | Clasifica una imagen (multipart o JSON Base64) |
-| `POST /predict/batch` | Clasifica un lote de imágenes |
-| `GET /docs` | Documentación interactiva (Swagger) |
-| `POST /predict?persist=analysis` | Analiza y guarda en la nube para el usuario autenticado |
-| `POST /predict?persist=rejection` | Guarda solamente fotogramas NO APTO en la galería privada |
-| `GET /cloud/me`, `POST /cloud/register`, `POST /cloud/login`, `POST /cloud/logout` | Sesiones y cuentas |
-| `GET /cloud/history`, `GET /cloud/history/{id}` | Historial privado y detalles |
-| `GET /cloud/history/{id}/image` | Fotografía privada con control de acceso |
-| `GET /cloud/rejections`, `DELETE /cloud/rejections` | Capturas especiales |
+| `POST /predict` y `POST /predict/batch` | Análisis visual |
+| `POST /cloud/anonymous` | Activa/renueva una sesión anónima privada sin contraseña |
+| `GET /cloud/me` | Estado de la sesión de este navegador |
+| `POST /predict?persist=analysis` | Analiza y guarda una muestra manual |
+| `POST /predict?persist=rejection` | Solo guarda los fotogramas NO APTO del modo continuo |
+| `GET /cloud/history` | Historial conjunto: análisis manuales + NO APTO automáticos |
+| `GET /cloud/history/{id}` y `GET /cloud/history/{id}/image` | Detalles y fotografía privada |
+| `GET /cloud/rejections` | Últimas 200 capturas de cámara NO APTO |
 | `POST /cloud/import` | Importación voluntaria de historial local |
-| `POST /cloud/delete-account` | Elimina definitivamente cuenta, resultados y fotografías al confirmar contraseña |
+| `GET /docs` | Documentación Swagger |
+
+Con `BV_ANONYMOUS_ONLY=true` quedan desactivados registro, login, logout y eliminación de cuenta por contraseña. Los endpoints de historial verifican la cookie anónima.
 
 ## Modelo
 
@@ -138,7 +136,7 @@ node frontend/tests/dom.test.mjs
 cd bakend && pip install -r requirements-dev.txt && python -m pytest
 ```
 
-Los recorridos de navegador (`frontend/tests/browser.mjs`, `source-browser.mjs`, `live.mjs`) requieren Playwright instalado aparte. Las pruebas de nube usan una base SQLite temporal y un bucket S3 simulado; comprueban aislamiento por usuario, sesiones, fotografías e importación.
+Los recorridos de navegador (`frontend/tests/browser.mjs`, `source-browser.mjs`, `live.mjs`) requieren Playwright instalado aparte. Las pruebas de nube usan SQLite temporal y un bucket S3 simulado; comprueban aislamiento entre navegadores anónimos, fotografías, NO APTO automático e importación.
 
 ## Estructura
 

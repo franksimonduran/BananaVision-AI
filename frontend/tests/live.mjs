@@ -64,11 +64,13 @@ try {
   await page.waitForFunction(() => document.getElementById('video').videoWidth > 0 && document.getElementById('realtime').checked);
   await page.waitForFunction(() => document.getElementById('resultSource').textContent === 'Captura de cámara' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
   assert.equal(await page.locator('#realtime').isChecked(), true);
-  assert.equal(await page.locator('#dashTotal').textContent(), '3'); // lecturas automáticas no son muestras distintas
+  const totalDuringContinuous = Number(await page.locator('#dashTotal').textContent());
+  assert.ok(totalDuringContinuous >= 3); // NO APTO auto sí se guarda, otras lecturas no.
   await page.locator('#saveCameraSample').click();
-  await page.waitForFunction(() => document.getElementById('dashTotal').textContent === '4' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
+  await page.waitForFunction(minimum => Number(document.getElementById('dashTotal').textContent) > minimum &&
+    document.getElementById('stage').getAttribute('aria-busy') === 'false', totalDuringContinuous);
   assert.equal(await page.locator('#realtime').isChecked(), false);
-  assert.equal(await page.locator('#historyBody tr').count(), 4);
+  assert.equal(await page.locator('#historyBody tr').count(), Number(await page.locator('#dashTotal').textContent()));
   await page.locator('#stopCamera').click();
   assert.equal(await page.locator('#video').isVisible(), false);
   assert.deepEqual(errors, []);
