@@ -66,7 +66,8 @@ try {
   assert.equal(await page.locator('#realtime').isChecked(), true);
   const totalDuringContinuous = Number(await page.locator('#dashTotal').textContent());
   assert.ok(totalDuringContinuous >= 3); // NO APTO auto sí se guarda, otras lecturas no.
-  await page.locator('#saveCameraSample').click();
+  await page.locator('#realtime').uncheck();
+  await page.locator('#analyzeButton').click();
   await page.waitForFunction(minimum => Number(document.getElementById('dashTotal').textContent) > minimum &&
     document.getElementById('stage').getAttribute('aria-busy') === 'false', totalDuringContinuous);
   assert.equal(await page.locator('#realtime').isChecked(), false);
