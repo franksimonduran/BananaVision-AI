@@ -100,8 +100,8 @@
               <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple hidden><canvas id="canvas" hidden></canvas>
               <div id="sampleSummary" class="capture-toolbar" hidden><img id="selectionThumbnail" alt="Miniatura de la muestra seleccionada" hidden><div class="selection-details"><span id="selectionText">Ninguna imagen seleccionada</span><small id="selectionMeta" hidden></small></div></div>
               <div class="capture-actions">
-                <div id="cameraControls" class="camera-controls" hidden><label class="switch-label"><input id="realtime" type="checkbox"><span class="switch" aria-hidden="true"></span>Análisis continuo</label><button id="saveCameraSample" class="button button-small button-outline" type="button" disabled>Guardar lectura manual</button><button id="stopCamera" class="text-button">Detener cámara</button></div>
-                <div class="alert-controls"><label class="switch-label"><input id="voiceEnabled" type="checkbox" checked aria-describedby="voiceStatus"><span class="switch" aria-hidden="true"></span><svg aria-hidden="true"><use href="#i-bell"/></svg>Aviso de voz</label><p id="voiceStatus" role="status">Aviso para NO APTO · máximo cada 5 s</p></div>
+                <div id="cameraControls" class="camera-controls" hidden><label class="switch-label"><input id="realtime" type="checkbox"><span class="switch" aria-hidden="true"></span>Análisis continuo</label><button id="stopCamera" class="text-button">Detener cámara</button></div>
+                <div class="alert-controls"><label class="switch-label"><input id="voiceEnabled" type="checkbox" checked><span class="switch" aria-hidden="true"></span><svg aria-hidden="true"><use href="#i-bell"/></svg>Aviso de voz</label></div>
                 <button id="analyzeButton" class="button button-primary analyze-button" disabled><svg aria-hidden="true"><use href="#i-scan"/></svg><span id="analyzeButtonText">Esperando conexión al modelo</span></button>
               </div>
 
@@ -121,10 +121,10 @@
                     <p id="resultMessage" class="result-description"></p>
                   </div>
                 </div>
-                <section class="recommendations" aria-labelledby="recommendationTitle"><dl class="result-metrics"><div><dt>Probabilidad APTO</dt><dd id="probApto"></dd></div><div><dt>Probabilidad NO APTO</dt><dd id="probNoApto"></dd></div><div><dt>Umbral mínimo</dt><dd id="thresholdValue"></dd></div><div><dt>Tiempo de inferencia</dt><dd id="inferenceTime"></dd></div></dl><div class="result-section-heading"><h3 id="recommendationTitle">Recomendaciones</h3><span>Del análisis a la acción</span></div><div class="recommendation-grid">
+                <section class="recommendations" aria-labelledby="recommendationTitle"><div class="result-section-heading"><h3 id="recommendationTitle">Recomendaciones</h3><span>Del análisis a la acción</span></div><div class="recommendation-grid">
                   <article class="recommendation-card"><span class="recommendation-icon"><svg aria-hidden="true"><use href="#i-arrow"/></svg></span><div><h4 id="recommendationOneTitle"></h4><p id="recommendationOneText"></p></div></article>
                   <article class="recommendation-card"><span class="recommendation-icon"><svg aria-hidden="true"><use href="#i-shield"/></svg></span><div><h4 id="recommendationTwoTitle"></h4><p id="recommendationTwoText"></p></div></article>
-                </div><p id="resultDisclaimer" class="recommendation-note result-disclaimer"></p></section>
+                </div></section>
               </div>
               </section>
           </div>
@@ -175,6 +175,6 @@
   <dialog id="clearHistoryDialog" aria-labelledby="clearHistoryTitle"><span class="eyebrow">HISTORIAL LOCAL</span><h2 id="clearHistoryTitle">¿Borrar las lecturas?</h2><p id="clearHistoryDescription">Se eliminarán los resultados y fotografías del historial y se actualizará el panel. Las capturas no aptas de la galería se conservan. Puedes exportar los datos a CSV antes de continuar.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar historial</button><button class="button button-danger" value="clear">Borrar historial</button></form></dialog>
   <dialog id="clearRejectionsDialog" aria-labelledby="clearRejectionsTitle"><h2 id="clearRejectionsTitle">¿Borrar las capturas no aptas?</h2><p id="clearRejectionsDescription">Se eliminarán las fotografías guardadas en este navegador. El historial de lecturas se conserva. Pausa el análisis en vivo para evitar nuevas capturas mientras borras.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar capturas</button><button class="button button-danger" value="clear">Borrar capturas</button></form></dialog>
   <noscript><div class="noscript-message"><img src="assets/logo-icono.png" alt="" width="34" height="34"><span>BananaVision AI necesita JavaScript para analizar imágenes y mostrar tus resultados.</span></div></noscript>
-  <script type="module" src="app.js?v=20261007-5"></script>
+  <script type="module" src="app.js?v=20261007-6"></script>
 </body>
 </html>
