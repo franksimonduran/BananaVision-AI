@@ -65,10 +65,6 @@ function clearRejectionCards() {
 
 function syncStorageUI() {
   const enabled = !!state.account;
-  $('historySaveStatus').textContent = enabled
-    ? 'Sin inicio de sesión: los NO APTO de la cámara continua se guardan automáticamente en tu historial privado en la nube. Los demás análisis se guardan manualmente.'
-    : state.cloudInitializing ? 'Preparando el historial automático…'
-      : 'Guardado local sin cuenta: los NO APTO de la cámara continua se registran en este navegador. Sin almacenamiento en la nube.';
   $('dashboardStorageLabel').textContent = enabled
     ? 'Historial privado en la nube · Sin inicio de sesión' : 'Historial guardado en este navegador';
   $('dashboardNote').textContent = enabled
