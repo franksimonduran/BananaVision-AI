@@ -64,8 +64,11 @@ try {
   await page.waitForFunction(() => document.getElementById('video').videoWidth > 0 && document.getElementById('realtime').checked);
   await page.waitForFunction(() => document.getElementById('resultSource').textContent === 'Captura de cámara' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
   assert.equal(await page.locator('#realtime').isChecked(), true);
-  assert.equal(await page.locator('#dashTotal').textContent(), '3'); // las lecturas continuas no entran en el historial
-  await page.locator('#realtime').uncheck();
+  assert.equal(await page.locator('#dashTotal').textContent(), '3'); // lecturas automáticas no son muestras distintas
+  await page.locator('#saveCameraSample').click();
+  await page.waitForFunction(() => document.getElementById('dashTotal').textContent === '4' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
+  assert.equal(await page.locator('#realtime').isChecked(), false);
+  assert.equal(await page.locator('#historyBody tr').count(), 4);
   await page.locator('#stopCamera').click();
   assert.equal(await page.locator('#video').isVisible(), false);
   assert.deepEqual(errors, []);
