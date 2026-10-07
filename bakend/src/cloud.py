@@ -432,9 +432,14 @@ def whoami(request: Request):
     if svc is None:
         return {"enabled": False, "user": None}
     account = svc.account(request.cookies.get(COOKIE))
-    return JSONResponse({"enabled": True, "user": (
-        {"id": account.id, "anonymous": True} if account else None
-    )}, headers={"Cache-Control": "no-store"})
+    user = None
+    if account:
+        anonymous = account.email.endswith("@anonymous.invalid")
+        user = {"id": account.id, "anonymous": anonymous}
+        if not anonymous:
+            user["email"] = account.email  # Compatibility for existing accounts.
+    return JSONResponse({"enabled": True, "user": user},
+                        headers={"Cache-Control": "no-store"})
 
 
 @router.post("/anonymous")
