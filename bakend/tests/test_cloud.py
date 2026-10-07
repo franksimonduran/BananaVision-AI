@@ -158,3 +158,57 @@ def test_can_delete_account_and_all_private_images(environment):
     assert not svc.s3.objects
     assert api.get("/cloud/me").json()["user"] is None
     assert api.get("/cloud/history").status_code == 401
+
+
+def test_prediction_api_saves_trusted_model_result_and_camera_rejections(environment):
+    """Storage is triggered by /predict; the browser never invents model scores."""
+    from src.api.routes import router as predictor_router, get_loader
+
+    svc, app = environment
+    app.include_router(predictor_router)
+
+    class Stub:
+        label = "APTO"
+
+        def predict(self, array):
+            assert array.shape == (1, 224, 224, 3)
+            return self.label, .95, 15.0, {
+                "NO APTO": .05 if self.label == "APTO" else .95,
+                "APTO": .95 if self.label == "APTO" else .05,
+            }
+
+    model = Stub()
+    app.dependency_overrides[get_loader] = lambda: model
+    api = client(app)
+    register(api, "sample@example.com")
+    payload = {"file": ("banana.png", photo(), "image/png")}
+
+    # Ordinary prediction has no cloud side-effect (guest/local contract).
+    ordinary = api.post("/predict", files=payload)
+    assert ordinary.status_code == 200
+    assert ordinary.json()["record_id"] is None
+    assert api.get("/cloud/history").json() == []
+
+    # Credentialed save must reject requests from other origins.
+    bad = api.post("/predict?persist=analysis", files=payload,
+                   headers={"Origin": "https://evil.invalid"})
+    assert bad.status_code == 403
+    assert api.get("/cloud/history").json() == []
+
+    saved = api.post("/predict?persist=analysis", files=payload)
+    assert saved.status_code == 200, saved.text
+    record_id = saved.json()["record_id"]
+    assert record_id
+    assert api.get("/cloud/history").json()[0]["id"] == record_id
+    assert api.get(f"/cloud/history/{record_id}/image").status_code == 200
+
+    # Continuous mode stores only model-confirmed NO APTO, never APTO.
+    passing_frame = api.post("/predict?persist=rejection", files=payload)
+    assert passing_frame.status_code == 200 and passing_frame.json()["capture_id"] is None
+    assert api.get("/cloud/rejections").json()["total"] == 0
+    model.label = "NO APTO"
+    rejected_frame = api.post("/predict?persist=rejection", files=payload)
+    assert rejected_frame.status_code == 200, rejected_frame.text
+    assert rejected_frame.json()["capture_id"]
+    assert api.get("/cloud/rejections").json()["total"] == 1
+    assert len(api.get("/cloud/history").json()) == 1
