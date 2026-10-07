@@ -35,3 +35,21 @@ test('health admite el 503 explícito de modelo no disponible', async () => {
     await assert.rejects(api.modelInfo(), error => error.status === 503);
   });
 });
+
+
+test('guardado solo cuando se solicita: la API utiliza persist=analysis para muestras explícitas', async () => {
+  const calls = [];
+  await withFetch(async (url, options) => {
+    calls.push({url, options});
+    return new Response(JSON.stringify({ label: 'APTO', record_id: url.includes('persist=analysis') ? 'sample-123' : null }), { status: 200 });
+  }, async () => {
+    const client = new ApiClient(location.origin);
+    const photo = new File([new Uint8Array([137, 80, 78, 71])], 'banana.png', {type: 'image/png'});
+    await client.predict(photo, false, { persist: 'analysis' });
+    await client.predict(photo, false, { persist: 'rejection' });
+    await client.predict(photo);
+    assert.ok(calls[0].url.endsWith('/predict?persist=analysis'));
+    assert.ok(calls[1].url.endsWith('/predict?persist=rejection'));
+    assert.ok(calls[2].url.endsWith('/predict'));
+  });
+});
