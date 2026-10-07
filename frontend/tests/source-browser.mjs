@@ -34,6 +34,9 @@ try {
   const origin = `http://127.0.0.1:${server.address().port}`;
   await page.goto(`${origin}/#capturar`);
   assert.equal(await page.locator('#video').isVisible(), false);
+  for (const id of ['dropHint', 'fileLimits', 'batchLimits']) {
+    assert.equal(await page.locator('#' + id).isVisible(), false, id + ' visible en cámara');
+  }
   await page.locator('#startLiveCamera').click();
   await page.waitForFunction(() => document.getElementById('video').videoWidth > 0 && document.getElementById('realtime').checked && document.getElementById('analyzeButtonText').textContent === 'Analizando en vivo');
   await page.locator('#resultContent').waitFor({ state: 'visible' });
@@ -66,6 +69,9 @@ try {
   assert.equal(await page.locator('#imageMode').getAttribute('aria-pressed'), 'true');
   assert.equal(await page.locator('#cameraControls').isVisible(), false);
   assert.equal(await page.locator('#selectImages').isVisible(), true);
+  for (const id of ['dropHint', 'fileLimits', 'batchLimits']) {
+    assert.equal(await page.locator('#' + id).isVisible(), true, id + ' no visible en imágenes');
+  }
   assert.equal(await page.evaluate(() => window.previousTrack.readyState), 'ended');
   assert.equal(await page.locator('#realtime').isChecked(), false);
   assert.equal(await page.locator('#analyzeButton').isDisabled(), true);
