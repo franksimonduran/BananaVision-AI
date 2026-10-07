@@ -9,7 +9,7 @@ from .schemas import Base64Input, PredictResponse, ModelInfo
 from ..config import settings
 from ..model.preprocessing import load_pil_from_bytes, preprocess_image_pil, InvalidImage
 from ..services.recommendations import get_recommendation
-from ..cloud import service as get_cloud_service
+from ..cloud import service as get_cloud_service, guard_origin
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,6 +76,7 @@ async def persist_if_requested(request: Request, result: PredictResponse, raw: b
         return result
     if mode not in {"analysis", "rejection"}:
         raise HTTPException(400, "Modo de guardado inválido.")
+    guard_origin(request)
     svc = get_cloud_service(request)
     account = svc.account(request.cookies.get("bv_session"))
     if account is None:
