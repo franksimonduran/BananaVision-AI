@@ -123,6 +123,14 @@ class CloudService:
     def anonymous_session(self, current_token: str | None):
         """Create a private browser-bound session without asking for credentials."""
         active = self.account(current_token)
+        if active is not None and current_token:
+            # Renew the existing token rather than leaking one session row per visit.
+            with self.Session.begin() as db:
+                existing = db.get(LoginSession, sha256(current_token.encode()).hexdigest())
+                if existing is not None and existing.account_id == active.id:
+                    existing.expires_at = utcnow() + timedelta(days=ANON_SESSION_DAYS)
+            return {"id": active.id, "anonymous": True}, current_token
+
         with self.Session.begin() as db:
             if active is None:
                 identity = str(uuid4())
