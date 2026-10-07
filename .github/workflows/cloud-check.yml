@@ -41,3 +41,78 @@ jobs:
           python -m pip install -r bakend/requirements.txt -r bakend/requirements-dev.txt
           cd bakend
           python -m pytest -q tests
+
+  cloud-smoke:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Lightweight HTTPS smoke-test dependencies
+        run: python -m pip install requests pillow
+      - name: Verify production private persistence and clean up test accounts
+        env:
+          BV_URL: https://bananavision-ai-production.up.railway.app
+        run: |
+          python - <<'PY'
+          import io, json, os, secrets, uuid
+          from datetime import datetime, timezone
+          import requests
+          from PIL import Image
+
+          base = os.environ["BV_URL"].rstrip("/")
+          accounts = []
+
+          def request(session, method, path, expected=200, **kwargs):
+              r = session.request(method, base + path, timeout=90, **kwargs)
+              if r.status_code != expected:
+                  raise RuntimeError(f"{method} {path}: HTTP {r.status_code}, {r.text[:250]}")
+              return r
+
+          def create_account():
+              session = requests.Session()
+              session.headers["Origin"] = base
+              creds = {
+                  "email": f"bv-smoke-{uuid.uuid4().hex}@example.com",
+                  "password": secrets.token_urlsafe(32),
+              }
+              request(session, "POST", "/cloud/register", json=creds)
+              accounts.append((session, creds["password"]))
+              return session
+
+          try:
+              first = requests.Session()
+              assert request(first, "GET", "/cloud/me").json()["enabled"] is True
+              first = create_account()
+              picture = io.BytesIO()
+              Image.new("RGB", (224, 224), "#f5cf21").save(picture, format="PNG")
+              raw = picture.getvalue()
+              stored = request(first, "POST", "/predict?persist=analysis",
+                               files={"file": ("banana.png", raw, "image/png")}).json()
+              record_id = stored.get("record_id")
+              assert record_id, "Prediction was not saved"
+              history = request(first, "GET", "/cloud/history").json()
+              assert len(history) == 1 and history[0]["id"] == record_id
+              response = request(first, "GET", f"/cloud/history/{record_id}/image")
+              assert response.content[:2] == b"\xff\xd8", "Photo was not stored as a JPEG"
+
+              second = create_account()
+              request(second, "GET", f"/cloud/history/{record_id}/image", expected=404)
+              assert request(second, "GET", "/cloud/history").json() == []
+
+              old_id = str(uuid.uuid4())
+              legacy = {"id": old_id, "name": "Registro anterior", "label": "APTO",
+                        "confidence": 0.89, "inference_time_ms": 16,
+                        "timestamp": datetime.now(timezone.utc).isoformat()}
+              request(first, "POST", "/cloud/import", data={"metadata": json.dumps(legacy)})
+              assert len(request(first, "GET", "/cloud/history").json()) == 2
+              print("CLOUD SMOKE PASSED: private login, prediction save, S3 photograph, user isolation, legacy import.")
+          finally:
+              for session, password in accounts:
+                  try:
+                      request(session, "POST", "/cloud/delete-account", json={"password": password})
+                  except Exception as exc:
+                      print("Temporary test account cleanup failed:", type(exc).__name__)
+          PY
