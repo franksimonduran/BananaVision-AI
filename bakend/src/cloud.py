@@ -32,6 +32,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 logger = logging.getLogger(__name__)
 COOKIE = "bv_session"
 SESSION_DAYS = 14
+ANON_SESSION_DAYS = 365
 MAX_ANALYSES = 1000
 MAX_REJECTIONS = 200
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -119,6 +120,24 @@ class CloudService:
                 return None
             return db.get(Account, row.account_id)
 
+    def anonymous_session(self, current_token: str | None):
+        """Create a private browser-bound session without asking for credentials."""
+        active = self.account(current_token)
+        with self.Session.begin() as db:
+            if active is None:
+                identity = str(uuid4())
+                active = Account(
+                    id=identity, email=f"guest-{identity}@anonymous.invalid",
+                    password_hash="ANONYMOUS_NO_PASSWORD", created_at=utcnow(),
+                )
+                db.add(active)
+            token = secrets.token_urlsafe(48)
+            db.add(LoginSession(
+                token_hash=sha256(token.encode()).hexdigest(),
+                account_id=active.id, expires_at=utcnow() + timedelta(days=ANON_SESSION_DAYS),
+            ))
+        return {"id": active.id, "anonymous": True}, token
+
     def login(self, email: str, password: str, *, register: bool):
         email = email.strip().lower()
         with self.Session.begin() as db:
@@ -154,7 +173,8 @@ class CloudService:
     def list_scans(self, account_id: str, kind: str, limit: int):
         with self.Session() as db:
             scans = db.scalars(select(Scan).where(
-                Scan.account_id == account_id, Scan.kind == kind
+                Scan.account_id == account_id,
+                Scan.kind.in_(("analysis", "rejection")) if kind == "history" else Scan.kind == kind,
             ).order_by(Scan.created_at.desc(), Scan.id.desc()).limit(limit)).all()
             return [self.public_scan(s) for s in scans]
 
@@ -169,7 +189,9 @@ class CloudService:
     def get_scan(self, account_id: str, scan_id: str, kind: str):
         with self.Session() as db:
             scan = db.get(Scan, scan_id)
-            if scan is None or scan.account_id != account_id or scan.kind != kind:
+            if scan is None or scan.account_id != account_id or (
+                scan.kind not in ("analysis", "rejection") if kind == "history" else scan.kind != kind
+            ):
                 raise HTTPException(404, "Registro no encontrado.")
             return scan
 
@@ -226,10 +248,12 @@ class CloudService:
                     image_key=image_key, created_at=utcnow())
                 db.add(scan)
                 db.flush()
-                keep = MAX_ANALYSES if kind == "analysis" else MAX_REJECTIONS
+                # A single combined history, including continuous NO APTO.
+                # Prune oldest results and their photos above the retention cap.
                 excess = db.scalars(select(Scan).where(
-                    Scan.account_id == account_id, Scan.kind == kind
-                ).order_by(Scan.created_at.desc(), Scan.id.desc()).offset(keep)).all()
+                    Scan.account_id == account_id,
+                    Scan.kind.in_(("analysis", "rejection")),
+                ).order_by(Scan.created_at.desc(), Scan.id.desc()).offset(MAX_ANALYSES)).all()
                 obsolete = [row.image_key for row in excess]
                 for row in excess:
                     db.delete(row)
@@ -292,7 +316,8 @@ class CloudService:
                     result=result, image_key=image_key, created_at=created))
                 db.flush()
                 excess = db.scalars(select(Scan).where(
-                    Scan.account_id == account_id, Scan.kind == "analysis"
+                    Scan.account_id == account_id,
+                    Scan.kind.in_(("analysis", "rejection")),
                 ).order_by(Scan.created_at.desc(), Scan.id.desc()).offset(MAX_ANALYSES)).all()
                 obsolete = [r.image_key for r in excess if r.image_key]
                 for row in excess:
@@ -307,7 +332,10 @@ class CloudService:
 
     def remove_scans(self, account_id: str, kind: str, scan_id: str | None = None):
         with self.Session.begin() as db:
-            query = select(Scan).where(Scan.account_id == account_id, Scan.kind == kind)
+            query = select(Scan).where(
+                Scan.account_id == account_id,
+                Scan.kind.in_(("analysis", "rejection")) if kind == "history" else Scan.kind == kind,
+            )
             if scan_id is not None:
                 query = query.where(Scan.id == scan_id)
             scans = db.scalars(query).all()
@@ -357,7 +385,7 @@ def service(request: Request) -> CloudService:
 def current_account(request: Request, svc: CloudService = Depends(service)):
     account = svc.account(request.cookies.get(COOKIE))
     if account is None:
-        raise HTTPException(401, "Inicia sesión para guardar y consultar tu información.")
+        raise HTTPException(401, "Este navegador todavía no tiene su sesión anónima. Recarga la página.")
     return account
 
 
@@ -387,14 +415,14 @@ def limit_auth(request: Request):
         q.append(now)
 
 
-def set_cookie(response: Response, token: str, request: Request):
+def set_cookie(response: Response, token: str, request: Request, *, days: int = SESSION_DAYS):
     secure = os.getenv("PUBLIC_ORIGIN", "").startswith("https://") or request.url.scheme == "https"
-    response.set_cookie(COOKIE, token, max_age=SESSION_DAYS * 86400, httponly=True,
+    response.set_cookie(COOKIE, token, max_age=days * 86400, httponly=True,
                         secure=secure, samesite="lax", path="/")
     response.headers["Cache-Control"] = "no-store"
 
 
-router = APIRouter(prefix="/cloud", tags=["Cuenta e historial en la nube"],
+router = APIRouter(prefix="/cloud", tags=["Historial privado y almacenamiento automático"],
                    dependencies=[Depends(guard_origin)])
 
 
@@ -405,13 +433,24 @@ def whoami(request: Request):
         return {"enabled": False, "user": None}
     account = svc.account(request.cookies.get(COOKIE))
     return JSONResponse({"enabled": True, "user": (
-        {"id": account.id, "email": account.email} if account else None
+        {"id": account.id, "anonymous": True} if account else None
     )}, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/anonymous")
+def activate_anonymous_browser(request: Request, response: Response,
+                               svc: CloudService = Depends(service), _=Depends(limit_auth)):
+    """Provision a private storage identity and long-lived HttpOnly cookie."""
+    user, token = svc.anonymous_session(request.cookies.get(COOKIE))
+    set_cookie(response, token, request, days=ANON_SESSION_DAYS)
+    return {"user": user}
 
 
 @router.post("/register")
 def register(body: Credentials, request: Request, response: Response,
              svc: CloudService = Depends(service), _=Depends(limit_auth)):
+    if os.getenv("BV_ANONYMOUS_ONLY", "false").lower() == "true":
+        raise HTTPException(404, "Las cuentas no están disponibles.")
     if os.getenv("BV_SIGNUP_ENABLED", "true").lower() != "true":
         raise HTTPException(403, "El registro de nuevas cuentas está desactivado.")
     user, token = svc.login(body.email, body.password, register=True)
@@ -422,6 +461,8 @@ def register(body: Credentials, request: Request, response: Response,
 @router.post("/login")
 def login(body: Credentials, request: Request, response: Response,
           svc: CloudService = Depends(service), _=Depends(limit_auth)):
+    if os.getenv("BV_ANONYMOUS_ONLY", "false").lower() == "true":
+        raise HTTPException(404, "Las cuentas no están disponibles.")
     user, token = svc.login(body.email, body.password, register=False)
     set_cookie(response, token, request)
     return {"user": user}
@@ -429,6 +470,8 @@ def login(body: Credentials, request: Request, response: Response,
 
 @router.post("/logout")
 def logout(request: Request, response: Response, svc: CloudService = Depends(service)):
+    if os.getenv("BV_ANONYMOUS_ONLY", "false").lower() == "true":
+        raise HTTPException(404, "La sesión anónima se administra automáticamente.")
     svc.logout(request.cookies.get(COOKIE))
     response.delete_cookie(COOKIE, path="/")
     response.headers["Cache-Control"] = "no-store"
@@ -437,14 +480,14 @@ def logout(request: Request, response: Response, svc: CloudService = Depends(ser
 
 @router.get("/history")
 def history(account: Account = Depends(current_account), svc: CloudService = Depends(service)):
-    return JSONResponse(svc.list_scans(account.id, "analysis", MAX_ANALYSES),
+    return JSONResponse(svc.list_scans(account.id, "history", MAX_ANALYSES),
                         headers={"Cache-Control": "no-store"})
 
 
 @router.get("/history/{scan_id}")
 def history_detail(scan_id: UUID, account: Account = Depends(current_account),
                    svc: CloudService = Depends(service)):
-    scan = svc.get_scan(account.id, str(scan_id), "analysis")
+    scan = svc.get_scan(account.id, str(scan_id), "history")
     return JSONResponse({"id": scan.id, "data": scan.result},
                         headers={"Cache-Control": "no-store"})
 
@@ -452,7 +495,7 @@ def history_detail(scan_id: UUID, account: Account = Depends(current_account),
 @router.get("/history/{scan_id}/image")
 def history_image(scan_id: UUID, account: Account = Depends(current_account),
                   svc: CloudService = Depends(service)):
-    scan = svc.get_scan(account.id, str(scan_id), "analysis")
+    scan = svc.get_scan(account.id, str(scan_id), "history")
     return Response(svc.image(scan), media_type="image/jpeg",
                     headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
@@ -460,7 +503,7 @@ def history_image(scan_id: UUID, account: Account = Depends(current_account),
 @router.delete("/history")
 def history_clear(account: Account = Depends(current_account),
                   svc: CloudService = Depends(service)):
-    return {"deleted": svc.remove_scans(account.id, "analysis")}
+    return {"deleted": svc.remove_scans(account.id, "history")}
 
 
 @router.get("/rejections")
@@ -520,6 +563,8 @@ class DeleteAccountRequest(BaseModel):
 def delete_account(body: DeleteAccountRequest, response: Response,
                    account: Account = Depends(current_account),
                    svc: CloudService = Depends(service)):
+    if os.getenv("BV_ANONYMOUS_ONLY", "false").lower() == "true":
+        raise HTTPException(404, "La eliminación de cuentas no está habilitada.")
     try:
         if not _hasher.verify(account.password_hash, body.password):
             raise HTTPException(403, "Contraseña incorrecta.")
