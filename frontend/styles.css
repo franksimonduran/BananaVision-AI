@@ -329,7 +329,6 @@ h1 { margin: 9px 0 10px; font-size: var(--fs-display); font-weight: 700; line-he
 .capture-toolbar:not([data-selected="true"]) .clear-sample { visibility: hidden; }
 .capture-toolbar > img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
 .alert-controls { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; padding: 0; margin-bottom: 14px; }
-.alert-controls p { flex: 1; margin: 0; color: var(--ink-3); font-size: var(--fs-meta); font-weight: 400; line-height: 1.5; }
 .switch-label { position: relative; display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; flex-shrink: 0; }
 .switch-label svg { width: 15px; height: 15px; color: var(--ink-3); }
 .switch-label input { position: absolute; top: 50%; left: 0; z-index: 1; transform: translateY(-50%); width: 32px; height: 36px; margin: 0; opacity: 0; cursor: pointer; }
@@ -395,12 +394,7 @@ h1 { margin: 9px 0 10px; font-size: var(--fs-display); font-weight: 700; line-he
 .recommendation-card h4 { margin: 1px 0 6px; font-size: var(--fs-sm); font-weight: 700; color: var(--ink-2); }
 .recommendation-card p { margin: 0; color: var(--ink-2); font-size: var(--fs-meta); font-weight: 400; line-height: 1.75; overflow-wrap: anywhere; }
 .result-headline { display: block; margin: 6px 0 0; font-size: var(--fs-title); font-weight: 700; color: var(--ink); }
-.result-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0 0; }
-.result-metrics > div { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surf-4); }
-.result-metrics dt { margin: 0 0 4px; color: var(--ink-3); font-size: var(--fs-micro); }
-.result-metrics dd { margin: 0; color: var(--ink); font-size: var(--fs-sm); font-weight: 700; }
 .crop-guide-live { border-style: dashed; box-shadow: none; }
-.recommendation-note { margin: 12px 0 0; color: var(--ink-3); font-size: var(--fs-micro); line-height: 1.6; }
 .history-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 .history-pagination > span { color: var(--ink-2); font-size: var(--fs-meta); text-align: center; }
 .history-reading { cursor: pointer; }
@@ -601,7 +595,6 @@ dialog .button-primary { width: 100%; }
   .result-top { --result-image-height: 190px; }
   .probabilities { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .recommendation-grid { grid-template-columns: minmax(0, 1fr); }
-  .result-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .metric-grid { gap: 12px; }
   .metric-card { padding: 16px; }
   .metric-detail { display: none; }
@@ -775,5 +768,3 @@ dialog .button-primary { width: 100%; }
 /* Make the difference between camera readings and saved samples explicit. */
 .camera-controls { flex-wrap: wrap; justify-content: flex-start; }
 .camera-controls > .text-button { margin-left: auto; }
-#saveCameraSample { white-space: normal; min-height: 36px; }
-@media (max-width: 480px) { #saveCameraSample { width: 100%; justify-content: center; order: 3; } .camera-controls > .text-button { margin-left: auto; } }
