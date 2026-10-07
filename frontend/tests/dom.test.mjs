@@ -28,3 +28,13 @@ test('fuente e imágenes son recursos locales existentes y no hay métricas fict
   assert.ok(!/fonts\.googleapis|fonts\.gstatic/.test(html));
   assert.ok(!/Vida útil estimada|Textura.*Óptima|Manchas.*Bajas|96%/.test(html));
 });
+
+
+test('la cámara permite guardar una muestra manual sin almacenar todos los fotogramas continuos', () => {
+  assert.ok(known.has('saveCameraSample'));
+  assert.ok(known.has('historySaveStatus'));
+  assert.match(app, /saveCameraSampleToHistory\(\)/);
+  assert.match(app, /state\.realtimeWanted = false/);
+  assert.match(app, /await analyze\(false\)/);
+  assert.match(app, /data\.record_id/);
+});
