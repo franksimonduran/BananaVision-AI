@@ -775,3 +775,11 @@ dialog .button-primary { width: 100%; }
   .cloud-history-actions { width: 100%; }
   .cloud-history-actions .button { flex: 1; }
 }
+
+
+/* Make the difference between camera readings and saved samples explicit. */
+.history-save-status { margin: 0 0 14px; color: var(--forest-3); background: #edf6f0; border: 1px solid #d1e5d8; padding: 10px 12px; border-radius: 10px; font-size: var(--fs-meta); line-height: 1.55; }
+.camera-controls { flex-wrap: wrap; justify-content: flex-start; }
+.camera-controls > .text-button { margin-left: auto; }
+#saveCameraSample { white-space: normal; min-height: 36px; }
+@media (max-width: 480px) { #saveCameraSample { width: 100%; justify-content: center; order: 3; } .camera-controls > .text-button { margin-left: auto; } }

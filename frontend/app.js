@@ -66,6 +66,11 @@ function clearRejectionCards() {
 
 function syncStorageUI() {
   const online = !!state.account;
+  $('historySaveStatus').textContent = online
+    ? 'Guardado en la nube activado. Las imágenes y los análisis manuales se sincronizan con tu cuenta. En cámara continua, pulsa «Guardar muestra en historial» para registrar una lectura.'
+    : state.cloudEnabled
+      ? 'Modo local: tus resultados no se sincronizan. Pulsa «Iniciar sesión» para guardar los próximos análisis en tu cuenta. La cámara continua no llena el historial; usa «Guardar muestra en historial».'
+      : 'Modo local: los análisis manuales se guardan solo en este navegador. La cámara continua requiere «Guardar muestra en historial» para registrar una lectura.';
   $('accountButton').hidden = !state.cloudEnabled;
   $('accountButtonText').textContent = online ? state.account.email : 'Iniciar sesión';
   $('logoutButton').hidden = !online;
@@ -195,6 +200,7 @@ function syncControls() {
   $('startLiveCamera').disabled = !state.apiReady || busy || state.cameraPending;
   $('startLiveCameraText').textContent = state.cameraPending ? 'Esperando permiso…' : 'Iniciar cámara en vivo';
   $('cameraControls').hidden = !state.stream;
+  $('saveCameraSample').disabled = !state.stream || !state.apiReady || state.cameraPending;
   $('fileLimits').textContent = `JPG, PNG o WebP · Hasta ${state.limits.image_mb} MB por imagen`;
   $('batchLimits').textContent = `Hasta ${state.limits.batch_files} imágenes · ${state.limits.batch_mb} MB por lote`;
   syncSampleSummary();
@@ -604,12 +610,27 @@ async function analyze(continuous = false) {
     }));
     $('readingPicker').hidden = state.readings.length < 2; showReading(0);
     alertExportResults(results, continuous);
-    if (!continuous) { if (state.account) await refreshCloudHistory(); else { persistHistory(); refreshData(); } }
+    if (!continuous) {
+      if (state.account) {
+        if (!results.every(data => typeof data.record_id === 'string' && data.record_id)) {
+          throw new Error('No se confirmó el guardado en la nube. No se añadirá un registro ficticio al historial.');
+        }
+        await refreshCloudHistory();
+        notice('Muestra guardada en tu cuenta. Ya aparece en Historial y estará disponible desde otros dispositivos.');
+      } else {
+        persistHistory();
+        refreshData();
+      }
+    }
     if (!continuous) $('resultAnnouncement').textContent = results.length > 1 ? `Lote completado: ${results.length} muestras. Selecciona un resultado para revisar sus recomendaciones.` : `${exportLabel(results[0].label)}. Confianza ${percentage(results[0].confidence)}. Análisis y recomendaciones disponibles.`;
     if (results.length > 1) notice(`Lote completado: ${results.length} muestras. Selecciona cada lectura para revisar su imagen y recomendaciones.`);
     if (!continuous && !state.account) {
-      try { await historyImages.save(state.readings, state.history); }
-      catch { notice('Los datos del análisis están disponibles, pero no se pudieron guardar las fotografías del historial.', 'error'); }
+      try {
+        await historyImages.save(state.readings, state.history);
+        notice('Muestra guardada en el historial de este navegador. Inicia sesión para sincronizar tus próximos análisis en la nube.');
+      } catch {
+        notice('La muestra figura en el historial local, pero no se pudo guardar su fotografía.', 'error');
+      }
     }
   } catch (error) {
     if (state.job === job && !error.cancelled) {
@@ -619,6 +640,18 @@ async function analyze(continuous = false) {
       if (error.status === 503 || error.connection) health();
     }
   } finally { if (state.job === job) { state.job = null; syncControls(); } }
+}
+
+
+async function saveCameraSampleToHistory() {
+  if (!state.stream || state.cameraPending || !state.apiReady) return;
+  // Pause the automatic frame loop. One deliberate capture corresponds to
+  // exactly one physical sample and must go through normal persistent analysis.
+  state.realtimeWanted = false;
+  $('realtime').checked = false;
+  if (state.job?.fromCamera) cancelAnalysis(null);
+  syncControls();
+  await analyze(false);
 }
 
 async function realtimeLoop() {
@@ -790,6 +823,7 @@ $('selectImages').addEventListener('click', () => $('fileInput').click());
 $('startLiveCamera').addEventListener('click', startCamera);
 $('stopCamera').addEventListener('click', stopCamera);
 $('analyzeButton').addEventListener('click', () => { unlockVoice(); analyze(); });
+$('saveCameraSample').addEventListener('click', () => { unlockVoice(); saveCameraSampleToHistory(); });
 $('realtime').addEventListener('change', () => {
   state.realtimeWanted = $('realtime').checked;
   if ($('realtime').checked) { unlockVoice(); realtimeLoop(); }
