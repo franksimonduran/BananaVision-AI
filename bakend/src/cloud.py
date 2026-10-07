@@ -11,6 +11,7 @@ from io import BytesIO
 from pathlib import Path
 from threading import Lock
 from uuid import UUID, uuid4
+import json
 import logging
 import os
 import secrets
@@ -18,11 +19,12 @@ import time
 
 import boto3
 from botocore.config import Config as S3Config
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError, VerificationError
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ValidationError
+from typing import Literal
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import DateTime, Float, ForeignKey, Index, JSON, String, create_engine, select, delete
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -71,7 +73,7 @@ class Scan(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     inference_time_ms: Mapped[float] = mapped_column(Float, nullable=False)
     result: Mapped[dict] = mapped_column(JSON, nullable=False)
-    image_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    image_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (Index("ix_bv_scans_account_kind_time", "account_id", "kind", "created_at"),)
@@ -80,6 +82,16 @@ class Scan(Base):
 class Credentials(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+
+
+class ImportedScan(BaseModel):
+    id: UUID
+    name: str = Field(min_length=1, max_length=200)
+    label: Literal["APTO", "NO APTO", "NO CONCLUYENTE"]
+    confidence: float = Field(ge=0, le=1)
+    inference_time_ms: float = Field(ge=0, le=120000)
+    timestamp: datetime
+    result: dict | None = None
 
 
 class CloudService:
@@ -162,6 +174,8 @@ class CloudService:
             return scan
 
     def image(self, scan: Scan):
+        if not scan.image_key:
+            raise HTTPException(404, "Este registro antiguo no tenía una fotografía guardada.")
         try:
             obj = self.s3.get_object(Bucket=self.bucket, Key=scan.image_key)
             return obj["Body"].read()
@@ -226,11 +240,70 @@ class CloudService:
             self._delete_image(key)
         return scan_id
 
-    def _delete_image(self, key: str):
+    def _delete_image(self, key: str | None):
+        if not key:
+            return
         try:
             self.s3.delete_object(Bucket=self.bucket, Key=key)
         except Exception:
             logger.warning("Photo cleanup failed, key=%s", key)
+
+
+    def import_scan(self, account_id: str, metadata: ImportedScan, raw: bytes | None):
+        scan_id = str(metadata.id)
+        with self.Session() as db:
+            found = db.get(Scan, scan_id)
+            if found:
+                if found.account_id == account_id and found.kind == "analysis":
+                    return scan_id
+                raise HTTPException(409, "Identificador de registro en uso.")
+        created = metadata.timestamp
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        created = created.astimezone(timezone.utc)
+        if created.year < 2000 or created > utcnow() + timedelta(days=1):
+            raise HTTPException(422, "Fecha inválida para un registro antiguo.")
+
+        image_key = None
+        if raw is not None:
+            photo = self.prepare_photo(raw)
+            image_key = f"{account_id}/analysis/{scan_id}.jpg"
+            try:
+                self.s3.put_object(Bucket=self.bucket, Key=image_key, Body=photo, ContentType="image/jpeg")
+            except Exception as exc:
+                raise HTTPException(503, "No se pudo importar la fotografía.") from exc
+
+        result = metadata.result if isinstance(metadata.result, dict) else {}
+        if len(json.dumps(result, ensure_ascii=False)) > 8192:
+            if image_key:
+                self._delete_image(image_key)
+            raise HTTPException(413, "Los metadatos de este registro son demasiado grandes.")
+        result = dict(result)
+        result["source"] = "imported_from_browser"
+        obsolete = []
+        try:
+            with self.Session.begin() as db:
+                db.scalar(select(Account).where(Account.id == account_id).with_for_update())
+                db.add(Scan(
+                    id=scan_id, account_id=account_id, kind="analysis",
+                    name=metadata.name, label=metadata.label,
+                    confidence=metadata.confidence,
+                    inference_time_ms=metadata.inference_time_ms,
+                    result=result, image_key=image_key, created_at=created))
+                db.flush()
+                excess = db.scalars(select(Scan).where(
+                    Scan.account_id == account_id, Scan.kind == "analysis"
+                ).order_by(Scan.created_at.desc(), Scan.id.desc()).offset(MAX_ANALYSES)).all()
+                obsolete = [r.image_key for r in excess if r.image_key]
+                for row in excess:
+                    db.delete(row)
+        except Exception:
+            if image_key:
+                self._delete_image(image_key)
+            raise
+        for key in obsolete:
+            self._delete_image(key)
+        return scan_id
 
     def remove_scans(self, account_id: str, kind: str, scan_id: str | None = None):
         with self.Session.begin() as db:
@@ -418,6 +491,26 @@ def rejection_clear(account: Account = Depends(current_account),
                     svc: CloudService = Depends(service)):
     return {"deleted": svc.remove_scans(account.id, "rejection")}
 
+
+
+@router.post("/import")
+async def import_history_item(metadata: str = Form(...), file: UploadFile | None = File(None),
+                              account: Account = Depends(current_account),
+                              svc: CloudService = Depends(service)):
+    if len(metadata) > 15000:
+        raise HTTPException(413, "Los metadatos son demasiado grandes.")
+    try:
+        record = ImportedScan.model_validate_json(metadata)
+    except ValidationError as exc:
+        raise HTTPException(422, "Datos de historial inválidos.") from exc
+    if file and file.content_type not in {"image/jpeg", "image/png", "image/webp", "application/octet-stream"}:
+        raise HTTPException(415, "Solo se admiten fotografías JPG, PNG o WebP.")
+    raw = await file.read(MAX_IMAGE_BYTES + 1) if file else None
+    if raw is not None and len(raw) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "La imagen supera el máximo de 5 MB.")
+    from starlette.concurrency import run_in_threadpool
+    saved_id = await run_in_threadpool(svc.import_scan, account.id, record, raw)
+    return {"id": saved_id}
 
 class DeleteAccountRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
