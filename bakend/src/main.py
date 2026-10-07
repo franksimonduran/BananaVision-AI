@@ -9,10 +9,16 @@ from starlette.concurrency import run_in_threadpool
 from .api.routes import router
 from .model.loader import ModelLoader
 from .config import settings, BASE
+from .cloud import create_cloud_from_environment, router as cloud_router
 
 @asynccontextmanager
 async def lifespan(app):
     app.state.loader = None
+    app.state.cloud = None
+    try:
+        app.state.cloud = await run_in_threadpool(create_cloud_from_environment)
+    except Exception:
+        logging.getLogger(__name__).exception('Cloud storage startup failed')
     try:
         app.state.loader = await run_in_threadpool(ModelLoader(settings.model_path).load)
     except Exception:
@@ -47,5 +53,6 @@ async def limit_body(request: Request, call_next):
     return await call_next(request)
 
 app.include_router(router)
+app.include_router(cloud_router)
 # One origin, one server; API routes are registered before the frontend mount.
 app.mount('/', StaticFiles(directory=BASE.parent / 'frontend', html=True), name='frontend')
