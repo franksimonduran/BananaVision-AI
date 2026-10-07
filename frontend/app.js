@@ -4,7 +4,7 @@ import ExportAlert from './voice.js?v=20261006-8';
 import RejectionStore from './rejections.js';
 import HistoryImages from './history-images.js';
 import CloudClient from './cloud.js?v=20261007-1';
-import { API_KEY, HISTORY_KEY, VOICE_KEY, DISCLAIMER, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261006-15';
+import { API_KEY, HISTORY_KEY, VOICE_KEY, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261007-7';
 import { renderActivity, renderDistribution, renderConfidence } from './charts.js?v=20261006-6';
 
 const $ = id => document.getElementById(id);
@@ -17,20 +17,13 @@ const rejectionCards = new Map();
 let rejectionLimit = 50, rejectionTicket = 0, rejectionStorageError = '';
 $('voiceEnabled').checked = alertVoice.enabled;
 
-function syncVoiceStatus() {
-  $('voiceStatus').textContent = !alertVoice.enabled ? 'Voz silenciada. Las alertas visuales siguen activas.'
-    : !alertVoice.available ? 'Este navegador no admite síntesis de voz. Las alertas visuales siguen activas.'
-    : `Aviso para NO APTO · máximo cada ${CONFIG.ALERT_INTERVAL_MS / 1000} s`;
-}
-
 function unlockVoice() {
   alertVoice.unlock();
-  syncVoiceStatus();
 }
 
 function alertExportResults(results, continuous) {
   const rejected = results.filter(result => result.label === 'NO APTO').length;
-  if (rejected) alertVoice.speak(rejected === 1 ? 'Atención. Resultado NO APTO. Se requiere revisión manual.' : `Atención. Hay ${rejected} resultados NO APTO. Se requiere revisión manual.`, { continuous });
+  if (rejected) alertVoice.speak('Atención, producto no apto para exportación.', { continuous });
 }
 const viewNames = { dashboard: 'Panel', capturar: 'Análisis', historial: 'Historial' };
 const state = {
@@ -191,7 +184,6 @@ function syncControls() {
   $('startLiveCamera').disabled = unavailable || !state.apiReady || busy || state.cameraPending;
   $('startLiveCameraText').textContent = state.cameraPending ? 'Esperando permiso…' : 'Iniciar cámara en vivo';
   $('cameraControls').hidden = !state.stream;
-  $('saveCameraSample').disabled = unavailable || !state.stream || !state.apiReady || state.cameraPending;
   $('fileLimits').textContent = `JPG, PNG o WebP · Hasta ${state.limits.image_mb} MB por imagen`;
   $('batchLimits').textContent = `Hasta ${state.limits.batch_files} imágenes · ${state.limits.batch_mb} MB por lote`;
   syncSampleSummary();
@@ -453,11 +445,6 @@ function showReading(index) {
   $('recommendationOneText').textContent = copy.recommendations[0].text;
   $('recommendationTwoTitle').textContent = copy.recommendations[1].title;
   $('recommendationTwoText').textContent = copy.recommendations[1].text;
-  $('probApto').textContent = percentage(data.probabilities.APTO);
-  $('probNoApto').textContent = percentage(data.probabilities['NO APTO']);
-  $('thresholdValue').textContent = percentage(data.threshold);
-  $('inferenceTime').textContent = elapsed(data.inference_time_ms);
-  $('resultDisclaimer').textContent = DISCLAIMER;
   $('confidenceValue').textContent = percentage(data.confidence);
   $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
   $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
@@ -652,17 +639,6 @@ async function analyze(continuous = false) {
 }
 
 
-async function saveCameraSampleToHistory() {
-  if (!state.stream || state.cameraPending || !state.apiReady) return;
-  // Pause the automatic frame loop. One deliberate capture corresponds to
-  // exactly one physical sample and must go through normal persistent analysis.
-  state.realtimeWanted = false;
-  $('realtime').checked = false;
-  if (state.job?.fromCamera) cancelAnalysis(null);
-  syncControls();
-  await analyze(false);
-}
-
 async function realtimeLoop() {
   if (state.realtimeRunning) return;
   state.realtimeRunning = true;
@@ -812,7 +788,6 @@ $('selectImages').addEventListener('click', () => $('fileInput').click());
 $('startLiveCamera').addEventListener('click', startCamera);
 $('stopCamera').addEventListener('click', stopCamera);
 $('analyzeButton').addEventListener('click', () => { unlockVoice(); analyze(); });
-$('saveCameraSample').addEventListener('click', () => { unlockVoice(); saveCameraSampleToHistory(); });
 $('realtime').addEventListener('change', () => {
   state.realtimeWanted = $('realtime').checked;
   if ($('realtime').checked) { unlockVoice(); realtimeLoop(); }
@@ -829,9 +804,8 @@ $('clearRejectionsDialog').addEventListener('close', async () => {
 $('voiceEnabled').addEventListener('change', () => {
   alertVoice.setEnabled($('voiceEnabled').checked);
   try { localStorage.setItem(VOICE_KEY, String(alertVoice.enabled)); } catch { /* Preference still applies to this session. */ }
-  if (alertVoice.enabled) unlockVoice(); else syncVoiceStatus();
+  if (alertVoice.enabled) unlockVoice();
 });
-alertVoice.speech?.addEventListener?.('voiceschanged', syncVoiceStatus);
 $('readingSelect').addEventListener('change', event => showReading(Number(event.target.value)));
 $('dismissNotice').addEventListener('click', () => { $('notice').hidden = true; });
 $('retryConnection').addEventListener('click', health);
@@ -856,5 +830,5 @@ window.addEventListener('pageshow', event => {
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { renderDashboard(); health(); if (state.account) refreshCloudHistory().catch(() => {}); } });
 $('todayLabel').textContent = new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
-syncVoiceStatus(); syncStorageUI(); refreshData(); syncControls(); navigate(true); health(); refreshCloudSession({ quiet: true });
+syncStorageUI(); refreshData(); syncControls(); navigate(true); health(); refreshCloudSession({ quiet: true });
 setInterval(() => { if (document.visibilityState !== 'hidden') health(); }, 30000);

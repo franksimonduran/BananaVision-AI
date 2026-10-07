@@ -67,7 +67,7 @@ try {
   });
   await page.route('**/predict/batch', route => route.fulfill({ json: [reading('NO APTO', .93, 152), reading('NO CONCLUYENTE', .6, 155)] }));
   await page.goto(`${origin}/#dashboard`);
-  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Modelo conectado');
+  await page.waitForFunction(() => document.getElementById('sidebarStatusText').textContent === 'Modelo conectado');
   assert.equal(await page.locator('#dashTotal').textContent(), '0');
   assert.equal(await page.locator('#view-dashboard').isVisible(), true);
   record('Panel inicial sin datos simulados y navegación accesible');
@@ -99,7 +99,7 @@ try {
   assert.equal(await page.locator('#resultContent').isVisible(), false);
   await page.evaluate(() => document.fonts.ready);
   assert.equal(await page.evaluate(() => document.fonts.check('800 48px Manrope')), true);
-  // Las lecturas del modo continuo no entran en el historial; solo se limpia por si hubiera datos previos.
+  // Se limpia el historial anterior: NO APTO continuos sí se guardan automáticamente.
   await page.locator('[data-view="historial"]').click();
   if (Number(await page.locator('#navCount').textContent())) {
     await page.locator('#clearHistory').click();
@@ -116,12 +116,10 @@ try {
   assert.equal(await page.locator('#resultLabel').textContent(), 'APTO');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), 0);
   assert.equal(await page.locator('#resultHeadline').textContent(), 'Apto para continuar');
-  assert.equal(await page.locator('#probApto').textContent(), '86.0%');
-  assert.equal(await page.locator('#probNoApto').textContent(), '14.0%');
-  assert.equal(await page.locator('#thresholdValue').textContent(), '70.0%');
-  assert.equal(await page.locator('#inferenceTime').textContent(), '120 ms');
   assert.equal(await page.locator('#recommendationOneTitle').textContent(), 'Continuar evaluación');
-  assert.ok((await page.locator('#resultDisclaimer').textContent()).includes('No constituye una certificación de calidad'));
+  for(const removedId of ['probApto', 'probNoApto', 'thresholdValue', 'inferenceTime', 'resultDisclaimer', 'voiceStatus']) {
+    assert.equal(await page.locator('#' + removedId).count(), 0);
+  }
   assert.equal(await page.locator('#recommendationTwoText').isVisible(), true);
   assert.equal(await page.locator('#resultThumbnail').evaluate(img => img.complete && img.naturalWidth > 0), true);
   assert.equal(await page.locator('#dashTotal').textContent(), '1');
@@ -132,7 +130,7 @@ try {
   await page.waitForFunction(() => document.getElementById('readingSelect').options.length === 2 && !document.getElementById('readingSelect').disabled);
   const batchAlerts = await page.evaluate(() => window.testVoiceAlerts);
   assert.equal(batchAlerts.length, 1);
-  assert.equal(batchAlerts[0].text, 'Atención. Resultado NO APTO. Se requiere revisión manual.');
+  assert.equal(batchAlerts[0].text, 'Atención, producto no apto para exportación.');
   await page.locator('#readingSelect').selectOption('1');
   assert.equal(await page.locator('#resultSource').textContent(), 'lote-c.png');
   assert.equal(await page.locator('#resultLabel').textContent(), 'NO CONCLUYENTE');
@@ -268,10 +266,10 @@ try {
   record('Detener cámara durante una inferencia permite seleccionar una nueva muestra inmediatamente');
 
   healthState = 'unavailable'; await page.locator('#connectionStatus').click();
-  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Modelo no disponible');
+  await page.waitForFunction(() => document.getElementById('sidebarStatusText').textContent === 'Modelo no disponible');
   assert.equal(await page.locator('#analyzeButton').isDisabled(), true);
   healthState = 'network'; await page.locator('#connectionStatus').click();
-  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Sin conexión');
+  await page.waitForFunction(() => document.getElementById('sidebarStatusText').textContent === 'Sin conexión');
   healthState = 'ready'; await page.locator('#retryConnection').click();
   await page.waitForFunction(() => !document.getElementById('analyzeButton').disabled);
   record('Modelo no disponible y fallo de red se distinguen; recuperación conserva la muestra');
@@ -279,7 +277,7 @@ try {
   await page.locator('[data-settings]:visible').first().click();
   await page.locator('#apiUrl').fill(origin);
   await page.locator('#settingsForm button[type="submit"]').click();
-  await page.waitForFunction(() => !document.getElementById('settingsDialog').open && document.getElementById('statusText').textContent === 'Modelo conectado');
+  await page.waitForFunction(() => !document.getElementById('settingsDialog').open && document.getElementById('sidebarStatusText').textContent === 'Modelo conectado');
   await page.locator('#openHelp').click();
   assert.equal(await page.getByRole('dialog', { name: /Una mejor imagen/ }).isVisible(), true);
   await page.keyboard.press('Escape');
@@ -301,7 +299,7 @@ try {
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), rejectionAlerts);
   await page.locator('#voiceEnabled').uncheck();
   await page.reload();
-  await page.waitForFunction(() => document.getElementById('statusText').textContent === 'Modelo conectado');
+  await page.waitForFunction(() => document.getElementById('sidebarStatusText').textContent === 'Modelo conectado');
   assert.equal(await page.locator('#voiceEnabled').isChecked(), false);
   await page.locator('#fileInput').setInputFiles(file('rechazo-silenciado.png'));
   mode = 'reject';
@@ -310,7 +308,6 @@ try {
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), 0);
   await page.locator('#voiceEnabled').check();
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), 0);
-  assert.equal(await page.locator('#voiceStatus').textContent(), 'Aviso para NO APTO · máximo cada 5 s');
   await page.locator('#cameraMode').click();
   await page.locator('#startLiveCamera').click();
   await page.waitForFunction(() => document.getElementById('video').videoWidth > 0 && document.getElementById('realtime').checked);

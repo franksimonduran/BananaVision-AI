@@ -34,7 +34,7 @@ test('prioriza voces naturales en español sobre voces básicas o de otro idioma
     { lang: 'es-MX', name: 'Español Natural' },
   ]);
   const alert = new ExportAlert({ speech, Utterance: UtteranceStub });
-  alert.speak('Atención. Resultado NO APTO. Se requiere revisión manual.');
+  alert.speak('Atención, producto no apto para exportación.');
   assert.equal(speech.spoken[0].voice.name, 'Español Natural');
   assert.equal(speech.spoken[0].lang, 'es-MX');
   assert.equal(speech.spoken[0].rate, 0.95);

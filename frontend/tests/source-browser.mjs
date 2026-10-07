@@ -48,7 +48,7 @@ try {
   }));
   assert.equal(await page.locator('#cropGuide').isVisible(), true);
   assert.equal(await page.locator('.capture-card > .card-heading .subtle-pill').count(), 0);
-  assert.equal(await page.locator('#voiceStatus').textContent(), 'Aviso para NO APTO · máximo cada 5 s');
+  assert.equal(await page.locator('#voiceEnabled').isVisible(), true);
   const cameraBounds = await page.locator('#stage').boundingBox();
   delay = 0;
   for (const label of ['NO APTO', 'NO CONCLUYENTE', 'APTO']) {

@@ -9,7 +9,6 @@ export const LABELS = ['APTO', 'NO APTO', 'NO CONCLUYENTE'];
 export const exportLabel = label => label;
 
 // Presentación al usuario; las etiquetas internas siguen siendo APTO / NO APTO / NO CONCLUYENTE.
-export const DISCLAIMER = 'Evaluación visual asistida por IA. Este resultado es una estimación del modelo basada en la imagen proporcionada. No constituye una certificación de calidad y debe complementarse con inspección manual y los controles requeridos para exportación.';
 const RESULT_COPY = {
   'APTO': {
     title: 'Apto para continuar',

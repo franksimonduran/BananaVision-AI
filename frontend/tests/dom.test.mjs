@@ -30,12 +30,10 @@ test('fuente e imágenes son recursos locales existentes y no hay métricas fict
 });
 
 
-test('la cámara permite guardar una muestra manual sin almacenar todos los fotogramas continuos', () => {
-  assert.ok(known.has('saveCameraSample'));
+test('la cámara continua y el análisis por imagen funcionan sin botón de guardado manual', () => {
+  assert.ok(!known.has('saveCameraSample'));
   assert.ok(!known.has('historySaveStatus'));
-  assert.match(app, /saveCameraSampleToHistory\(\)/);
-  assert.match(app, /state\.realtimeWanted = false/);
-  assert.match(app, /await analyze\(false\)/);
+  assert.match(app, /continuous && results\.some\(data => data\.label === 'NO APTO'\)/);
   assert.match(app, /data\.record_id/);
 });
 
@@ -71,4 +69,14 @@ test('no se muestra estado del modelo en cabecera ni ficha de arquitectura', () 
   assert.doesNotMatch(app, /MobileNetV2|Teachable Machine|Sin métricas de validación independiente/);
   assert.doesNotMatch(app, /modelInfo\(\)/);
   assert.match(app, /\$\('sidebarStatusText'\)\.textContent/);
+});
+
+
+test('sin métricas técnicas ni leyendas extensas en el resultado', () => {
+  for(const id of ['probApto', 'probNoApto', 'thresholdValue', 'inferenceTime', 'resultDisclaimer', 'voiceStatus']) {
+    assert.ok(!known.has(id), 'Elemento eliminado que sigue visible: ' + id);
+  }
+  assert.ok(known.has('voiceEnabled'), 'El interruptor de voz debe permanecer');
+  assert.match(app, /Atención, producto no apto para exportación\./);
+  assert.doesNotMatch(app, /Aviso para NO APTO · máximo cada/);
 });

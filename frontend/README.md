@@ -108,7 +108,7 @@ Las imágenes sintéticas y la cámara virtual verifican integración, no precis
 
 Las clasificaciones se muestran como APTO, NO APTO o NO CONCLUYENTE en resultados, historial, filtros, gráficas, anuncios de lectura y exportación CSV.
 
-- Un nuevo resultado NO APTO habla automáticamente «Atención. Resultado NO APTO. Se requiere revisión manual.». Un lote produce un solo aviso, con el número de resultados NO APTO cuando es más de uno.
+- Un nuevo resultado NO APTO reproduce automáticamente «Atención, producto no apto para exportación.». Un lote con resultados NO APTO produce un solo aviso; las alertas de la cámara continua respetan el intervalo mínimo de 5 segundos.
 - APTO y NO CONCLUYENTE no emiten voz. Consultar historial o seleccionar lecturas de un lote tampoco habla.
 - En cámara continua se permite como máximo un aviso cada 5 segundos. No se interrumpe ni se encola otro aviso mientras la síntesis esté hablando o tenga audio pendiente.
 - El control Aviso de voz está activado por defecto y conserva la preferencia en el navegador, también desde la anterior Alarma sonora. Silenciar cancela el aviso pendiente sin ocultar las alertas visuales.
