@@ -213,8 +213,6 @@ h1, h2, h3, h4 { font-weight: 700; }
 .breadcrumb strong { color: var(--ink); font-weight: 600; }
 .top-actions { display: flex; align-items: center; gap: 16px; }
 .today-label { font-size: var(--fs-sm); font-weight: 400; color: var(--ink-3); }
-.connection { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 30px; background: var(--surf-3); color: var(--ok-ink); font-size: var(--fs-meta); font-weight: 600; transition: background var(--transition); }
-.connection:hover { background: var(--ok-wash); }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--banana); flex-shrink: 0; }
 .dot.ok { background: var(--ok-dot); box-shadow: 0 0 0 3px var(--ok-ring); }
 .dot.error { background: var(--bad); }
@@ -543,12 +541,11 @@ dialog ol { padding-left: 19px; }
 dialog li { padding-bottom: 8px; }
 .dialog-close { position: absolute; right: 14px; top: 14px; border: 0; background: none; }
 .dialog-logo { display: block; width: 52px; height: 52px; border-radius: 14px; margin-bottom: 14px; }
-.dialog-note, .model-details { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surf-4); color: var(--ink-3); font-size: var(--fs-sm); line-height: 1.8; }
+.dialog-note { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surf-4); color: var(--ink-3); font-size: var(--fs-sm); line-height: 1.8; }
 dialog label { display: block; margin-bottom: 8px; font-size: var(--fs-sm); font-weight: 600; }
 dialog input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--field-line); border-radius: 10px; background: var(--surf); color: var(--ink); font-size: var(--fs-meta); }
 dialog form > p { margin-top: 13px; }
 dialog .button-primary { width: 100%; }
-.model-details { margin-top: 20px; }
 .form-error { color: var(--bad-ink); }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .noscript-message { position: fixed; bottom: 0; z-index: 20; width: 100%; padding: 20px; background: var(--forest); color: white; }
@@ -657,7 +654,6 @@ dialog .button-primary { width: 100%; }
   .breadcrumb { font-size: var(--fs-meta); gap: 8px; }
   .breadcrumb > span, .breadcrumb > strong { display: none; }
   .top-actions { gap: 9px; }
-  .connection { min-height: 32px; padding: 6px 9px; font-size: var(--fs-micro); }
   .icon-button { width: 32px; height: 32px; min-width: 32px; }
   .workspace-avatar { gap: 4px; }
   .workspace-logo { width: 30px; height: 30px; }
@@ -735,7 +731,6 @@ dialog .button-primary { width: 100%; }
   main, .sidebar, .topbar { padding-inline: 14px; }
   .breadcrumb { display: none; }
   .top-actions { width: 100%; justify-content: flex-end; }
-  .connection { margin-right: auto; }
   .metric-card { padding: 12px; }
   .metric-top > .metric-icon { display: none; }
   .metric-top { min-height: 27px; }
