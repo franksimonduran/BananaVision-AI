@@ -8,3 +8,8 @@ python-multipart==0.0.20
 pydantic==2.13.5
 pydantic-settings==2.9.1
 numpy==1.26.4
+SQLAlchemy==2.0.44
+psycopg[binary]==3.2.12
+argon2-cffi==25.1.0
+email-validator==2.3.0
+boto3==1.40.57
