@@ -169,6 +169,10 @@ function syncControls() {
   $('cameraIdleDescription').textContent = imageMode ? 'Selecciona una fotografía o un lote para analizar.' : 'Centra un solo plátano y utiliza una iluminación uniforme.';
   $('startLiveCamera').hidden = imageMode;
   $('selectImages').hidden = !imageMode;
+  // Image upload instructions should never appear in live-camera mode.
+  $('dropHint').hidden = !imageMode;
+  $('fileLimits').hidden = !imageMode;
+  $('batchLimits').hidden = !imageMode;
   $('selectImages').disabled = busy;
   $('selectImagesText').textContent = state.files.length ? 'Cambiar imágenes' : 'Seleccionar imágenes';
   $('analyzeButton').disabled = unavailable || !state.apiReady || busy || state.cameraPending || (!state.stream && !state.files.length) || $('realtime').checked;

@@ -80,3 +80,11 @@ test('sin métricas técnicas ni leyendas extensas en el resultado', () => {
   assert.match(app, /Atención, producto no apto para exportación\./);
   assert.doesNotMatch(app, /Aviso para NO APTO · máximo cada/);
 });
+
+test('las indicaciones de carga se ocultan en cámara y se muestran en análisis por imágenes', () => {
+  for (const id of ['dropHint', 'fileLimits', 'batchLimits']) {
+    assert.ok(known.has(id), 'Falta el texto de ayuda de carga de imágenes: ' + id);
+    assert.match(app, new RegExp("\\$\\('" + id + "'\\)\\.hidden = !imageMode;"));
+  }
+  assert.match(html, /id="dropHint"[^>]*hidden/);
+});
