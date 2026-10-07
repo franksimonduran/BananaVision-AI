@@ -256,3 +256,22 @@ def test_private_anonymous_browsers_save_history_without_login(environment, monk
     assert first.get("/cloud/history").json()[0]["id"] == capture_id
     assert first.delete("/cloud/history").json()["deleted"] == 1
     assert svc.s3.objects == {}
+
+
+
+def test_automatic_rejections_keep_last_1000_combined_history_and_clean_photos(environment, monkeypatch):
+    from src import cloud as cloud_module
+
+    svc, app = environment
+    monkeypatch.setenv("BV_ANONYMOUS_ONLY", "true")
+    monkeypatch.setattr(cloud_module, "MAX_ANALYSES", 3)
+    api = client(app)
+    anonymous = api.post("/cloud/anonymous").json()["user"]
+    for index in range(5):
+        kind = "analysis" if index == 1 else "rejection"
+        svc.store(anonymous["id"], kind, photo(), f"muestra-{index}.png", ExamplePrediction())
+    remaining = api.get("/cloud/history").json()
+    assert len(remaining) == 3
+    assert len(svc.s3.objects) == 3  # S3 objects pruned with oldest DB rows.
+    assert api.delete("/cloud/history").json()["deleted"] == 3
+    assert not svc.s3.objects
