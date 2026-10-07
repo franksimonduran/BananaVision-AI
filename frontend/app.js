@@ -3,6 +3,7 @@ import ApiClient from './api.js';
 import ExportAlert from './voice.js?v=20261006-8';
 import RejectionStore from './rejections.js';
 import HistoryImages from './history-images.js';
+import CloudClient from './cloud.js?v=20261007-1';
 import { API_KEY, HISTORY_KEY, VOICE_KEY, DISCLAIMER, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261006-15';
 import { renderActivity, renderDistribution, renderConfidence } from './charts.js?v=20261006-6';
 
@@ -10,6 +11,7 @@ const $ = id => document.getElementById(id);
 const alertVoice = new ExportAlert({ enabled: storageGet(VOICE_KEY) !== 'false', intervalMs: CONFIG.ALERT_INTERVAL_MS });
 const rejectionStore = new RejectionStore();
 const historyImages = new HistoryImages();
+const cloud = new CloudClient();
 let historyDetailUrl = null, historyDetailTicket = 0;
 const rejectionCards = new Map();
 let rejectionLimit = 50, rejectionTicket = 0, rejectionStorageError = '';
@@ -36,7 +38,7 @@ const state = {
   previewUrl: null, thumbnailUrl: null, job: null, cameraPending: false,
   cameraTicket: 0, realtimeRunning: false, realtimeWanted: true, apiReady: false, sessionTotal: 0,
   limits: { image_mb: CONFIG.MAX_IMAGE_SIZE_MB, batch_files: CONFIG.MAX_BATCH_FILES, batch_mb: CONFIG.MAX_BATCH_SIZE_MB },
-  view: 'capturar'
+  view: 'capturar', cloudEnabled: false, account: null
 };
 let api;
 try { api = new ApiClient(validApiUrl(storageGet(API_KEY) || CONFIG.API_BASE)); }
@@ -47,6 +49,89 @@ function notice(message, kind = 'success') {
   $('notice').dataset.kind = kind;
   $('notice').setAttribute('role', kind === 'error' ? 'alert' : 'status');
   $('notice').hidden = false;
+}
+
+
+let authMode = 'login';
+let cloudTicket = 0;
+
+function clearRejectionCards() {
+  rejectionTicket++;
+  for (const [, card] of rejectionCards) {
+    URL.revokeObjectURL(card.url);
+    card.node.remove();
+  }
+  rejectionCards.clear();
+}
+
+function syncStorageUI() {
+  const online = !!state.account;
+  $('accountButton').hidden = !state.cloudEnabled;
+  $('accountButtonText').textContent = online ? state.account.email : 'Iniciar sesión';
+  $('logoutButton').hidden = !online;
+  $('dashboardStorageLabel').textContent = online ? 'Historial privado en la nube' : 'Historial local · Inicia sesión para sincronizar';
+  $('dashboardNote').textContent = online
+    ? 'Tus análisis y fotografías están guardados en tu cuenta y disponibles desde otros dispositivos. La clasificación requiere revisión manual.'
+    : 'Este historial solo se guarda en este navegador. Inicia sesión para guardar tus próximos análisis y fotos en la nube.';
+  $('historyStorageLabel').textContent = online
+    ? 'Guardado privado en PostgreSQL y fotografías en la nube'
+    : 'Guardado local en este navegador · no sincronizado';
+  $('clearHistoryDescription').textContent = online
+    ? 'Se eliminarán permanentemente de tu cuenta todos los análisis y fotografías guardados en la nube. Puedes exportar CSV antes de borrar.'
+    : 'Se eliminarán los resultados y fotografías guardados en este navegador. Las capturas NO APTO de la galería se conservan.';
+  $('clearRejectionsDescription').textContent = online
+    ? 'Se borrarán de tu cuenta las fotografías NO APTO almacenadas en la nube. El historial de análisis permanece.'
+    : 'Se eliminarán las fotografías NO APTO de este navegador. El historial de análisis permanece.';
+  $('importLocalHistory').hidden = !online || !loadHistory().length;
+}
+
+async function refreshCloudHistory() {
+  if (!state.account) return;
+  state.history = await cloud.history();
+  refreshData();
+}
+
+async function refreshCloudSession({ quiet = false } = {}) {
+  const ticket = ++cloudTicket;
+  try {
+    const session = await cloud.me();
+    const history = session.user ? await cloud.history() : loadHistory();
+    if (ticket !== cloudTicket) return;
+    const oldId = state.account?.id;
+    state.cloudEnabled = session.enabled === true;
+    state.account = session.user || null;
+    state.history = history;
+    if (session.user && api.baseUrl !== location.origin) {
+      api = new ApiClient(location.origin);
+      try { localStorage.setItem(API_KEY, location.origin); } catch { /* Same-origin server still applies. */ }
+    }
+    if (oldId !== state.account?.id) { clearRejectionCards(); cloud.images.clear(); }
+    syncStorageUI(); refreshData(); await renderRejections();
+  } catch (error) {
+    if (ticket !== cloudTicket) return;
+    if (!quiet) notice('No se pudo sincronizar la cuenta: ' + error.message, 'error');
+  }
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const create = mode === 'register';
+  $('accountTitle').textContent = create ? 'Crear cuenta privada' : 'Iniciar sesión';
+  $('accountDescription').textContent = create
+    ? 'Usa un correo válido y una contraseña de al menos 12 caracteres para proteger tus análisis.'
+    : 'Consulta tus resultados y fotografías desde cualquier dispositivo con tu cuenta.';
+  $('accountSubmit').textContent = create ? 'Crear cuenta y entrar' : 'Iniciar sesión';
+  $('accountSwitchMode').textContent = create ? 'Ya tengo cuenta · Iniciar sesión' : '¿No tienes cuenta? Crear una';
+  $('accountPassword').minLength = create ? 12 : 1;
+  $('accountPassword').autocomplete = create ? 'new-password' : 'current-password';
+  $('accountError').hidden = true;
+}
+
+function openAccount() {
+  if (!state.cloudEnabled) { notice('Las cuentas no están habilitadas en este servidor.', 'error'); return; }
+  if (state.account) { notice('Sesión iniciada como ' + state.account.email); return; }
+  setAuthMode('login');
+  $('accountDialog').showModal();
 }
 
 function icon(name, className = '') {
@@ -118,13 +203,13 @@ function syncControls() {
 async function renderRejections() {
   const ticket = ++rejectionTicket;
   try {
-    const { items, total } = await rejectionStore.snapshot(rejectionLimit);
+    const { items, total } = state.account ? await cloud.rejections(rejectionLimit) : await rejectionStore.snapshot(rejectionLimit);
     if (ticket !== rejectionTicket) return;
     $('rejectionCount').textContent = String(total);
     $('rejectionEmpty').hidden = total > 0;
     $('clearRejections').disabled = total === 0;
     $('loadMoreRejections').hidden = items.length >= total;
-    $('rejectionCapacity').textContent = rejectionStorageError || `${items.length} de ${total} capturas · Guardadas en este navegador · máximo ${RejectionStore.MAX_CAPTURES}`;
+    $('rejectionCapacity').textContent = rejectionStorageError || `${items.length} de ${total} capturas · ${state.account ? 'Guardadas en la nube' : 'Guardadas en este navegador'} · máximo ${RejectionStore.MAX_CAPTURES}`;
     const visible = new Set(items.map(item => item.id));
     for (const [id, card] of rejectionCards) {
       if (!visible.has(id)) { URL.revokeObjectURL(card.url); card.node.remove(); rejectionCards.delete(id); }
@@ -142,7 +227,7 @@ async function renderRejections() {
         const actions = document.createElement('div'); actions.className = 'rejection-actions';
         const download = document.createElement('a'); download.href = url; download.download = `no-apto-${item.timestamp.replace(/[:.]/g, '-')}-${item.id.slice(0, 8)}.jpg`; download.className = 'text-link'; download.textContent = 'Descargar JPG';
         const remove = document.createElement('button'); remove.className = 'text-button danger-text'; remove.textContent = 'Eliminar'; remove.setAttribute('aria-label', `Eliminar captura del ${formatDate(item.timestamp)}`);
-        remove.addEventListener('click', async () => { try { await rejectionStore.remove(item.id); await renderRejections(); } catch { notice('No se pudo eliminar la captura. Inténtalo de nuevo.', 'error'); } });
+        remove.addEventListener('click', async () => { try { if (state.account) await cloud.removeRejection(item.id); else await rejectionStore.remove(item.id); await renderRejections(); } catch { notice('No se pudo eliminar la captura. Inténtalo de nuevo.', 'error'); } });
         actions.append(download, remove); details.append(title, time, confidence, actions); node.append(image, details);
         card = { url, node }; rejectionCards.set(item.id, card);
       }
@@ -157,9 +242,9 @@ async function renderRejections() {
 async function saveRejectedReading(reading) {
   // Un análisis manual ya queda en el historial con su fotografía; aquí solo van los fotogramas del modo continuo.
   if (!reading.continuous || reading.data.label !== 'NO APTO') return;
-  try { await rejectionStore.saveReading(reading); rejectionStorageError = ''; await renderRejections(); }
+  try { if (!state.account) await rejectionStore.saveReading(reading); rejectionStorageError = ''; await renderRejections(); }
   catch {
-    rejectionStorageError = 'Se detectó un NO APTO, pero no se pudo guardar su fotografía. Comprueba el espacio disponible del navegador.';
+    rejectionStorageError = 'Se detectó un NO APTO, pero no se pudo consultar su fotografía guardada.';
     $('rejectionCapacity').textContent = rejectionStorageError;
     notice(rejectionStorageError, 'error');
   }
@@ -285,20 +370,22 @@ async function openHistoryDetail(item) {
   $('historyDetailImageStatus').textContent = item.id ? 'Cargando fotografía…' : 'Imagen no disponible para este registro anterior.';
   if (!$('historyDetailDialog').open) $('historyDetailDialog').showModal();
   try {
-    const stored = await historyImages.get(item.id);
+    const stored = state.account
+      ? { data: (await cloud.detail(item.id)).data, blob: await cloud.historyPhoto(item.id).catch(() => null) }
+      : await historyImages.get(item.id);
     if (ticket !== historyDetailTicket || !$('historyDetailDialog').open) return;
     if (!stored?.blob) {
       $('historyDetailImageStatus').textContent = 'Imagen no disponible para este registro.';
-      return;
+    } else {
+      historyDetailUrl = URL.createObjectURL(stored.blob);
+      $('historyDetailImage').src = historyDetailUrl;
+      $('historyDetailImage').hidden = false;
+      $('historyDetailImageStatus').hidden = true;
+      $('historyDetailDownload').href = historyDetailUrl;
+      const extension = stored.blob.type === 'image/png' ? 'png' : stored.blob.type === 'image/webp' ? 'webp' : 'jpg';
+      $('historyDetailDownload').download = `muestra-${item.id}.${extension}`;
+      $('historyDetailDownload').hidden = false;
     }
-    historyDetailUrl = URL.createObjectURL(stored.blob);
-    $('historyDetailImage').src = historyDetailUrl;
-    $('historyDetailImage').hidden = false;
-    $('historyDetailImageStatus').hidden = true;
-    $('historyDetailDownload').href = historyDetailUrl;
-    const extension = stored.blob.type === 'image/png' ? 'png' : stored.blob.type === 'image/webp' ? 'webp' : 'jpg';
-    $('historyDetailDownload').download = `muestra-${item.id}.${extension}`;
-    $('historyDetailDownload').hidden = false;
     const recommendation = stored.data?.recommendation;
     if (recommendation) {
       $('historyDetailDestination').textContent = recommendation.destination || 'Consulta el destino con el responsable del lote.';
@@ -313,6 +400,7 @@ async function openHistoryDetail(item) {
 }
 
 function persistHistory() {
+  if (state.account) return; // Saved atomically on the server before prediction is returned.
   if (!saveHistory(state.history)) notice('No se pudo guardar el historial en este navegador. Puedes exportarlo a CSV.', 'error');
 }
 
@@ -498,28 +586,28 @@ async function analyze(continuous = false) {
     const inputs = fromCamera ? [await capture()] : state.files.slice();
     const timestamp = new Date().toISOString();
     if (state.job !== job) return;
-    const options = { signal: job.controller.signal };
+    const options = { signal: job.controller.signal, ...(state.account ? { persist: continuous ? 'rejection' : 'analysis' } : {}) };
     const results = inputs.length > 1 ? await api.batch(inputs, options) : [await api.predict(inputs[0], false, options)];
     if (state.job !== job) return;
     if (!Array.isArray(results) || results.length !== inputs.length) throw new Error('El servidor devolvió un lote incompleto.');
     results.forEach(validateResult);
-    state.readings = results.map((data, index) => ({ id: crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
+    state.readings = results.map((data, index) => ({ id: data.record_id || crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
     state.readings.forEach(reading => {
       state.sessionTotal++; // lecturas de la sesión (incluye las automáticas)
       // Las lecturas del modo continuo no son muestras nuevas: no se guardan en el historial.
-      if (!continuous) state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200), label: reading.data.label, confidence: reading.data.confidence, inference_time_ms: reading.data.inference_time_ms, timestamp });
+      if (!continuous && !state.account) state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200), label: reading.data.label, confidence: reading.data.confidence, inference_time_ms: reading.data.inference_time_ms, timestamp });
       saveRejectedReading(reading);
     });
-    if (!continuous) state.history = state.history.slice(0, CONFIG.MAX_HISTORY);
+    if (!continuous && !state.account) state.history = state.history.slice(0, CONFIG.MAX_HISTORY);
     $('readingSelect').replaceChildren(...state.readings.map((reading, index) => {
       const option = document.createElement('option'); option.value = String(index); option.textContent = `${index + 1}. ${reading.name} · ${exportLabel(reading.data.label)}`; return option;
     }));
     $('readingPicker').hidden = state.readings.length < 2; showReading(0);
     alertExportResults(results, continuous);
-    if (!continuous) { persistHistory(); refreshData(); }
+    if (!continuous) { if (state.account) await refreshCloudHistory(); else { persistHistory(); refreshData(); } }
     if (!continuous) $('resultAnnouncement').textContent = results.length > 1 ? `Lote completado: ${results.length} muestras. Selecciona un resultado para revisar sus recomendaciones.` : `${exportLabel(results[0].label)}. Confianza ${percentage(results[0].confidence)}. Análisis y recomendaciones disponibles.`;
     if (results.length > 1) notice(`Lote completado: ${results.length} muestras. Selecciona cada lectura para revisar su imagen y recomendaciones.`);
-    if (!continuous) {
+    if (!continuous && !state.account) {
       try { await historyImages.save(state.readings, state.history); }
       catch { notice('Los datos del análisis están disponibles, pero no se pudieron guardar las fotografías del historial.', 'error'); }
     }
@@ -527,6 +615,7 @@ async function analyze(continuous = false) {
     if (state.job === job && !error.cancelled) {
       notice(`${error.message} Tu muestra sigue disponible para reintentar.`, 'error');
       $('realtime').checked = false;
+      if (error.status === 401) refreshCloudSession();
       if (error.status === 503 || error.connection) health();
     }
   } finally { if (state.job === job) { state.job = null; syncControls(); } }
@@ -597,6 +686,56 @@ async function openSettings() {
   }
 }
 
+
+$('accountButton').addEventListener('click', openAccount);
+$('accountSwitchMode').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
+$('accountForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const submit = $('accountSubmit');
+  submit.disabled = true;
+  $('accountError').hidden = true;
+  try {
+    const email = $('accountEmail').value.trim(), password = $('accountPassword').value;
+    if (authMode === 'register') await cloud.register(email, password);
+    else await cloud.login(email, password);
+    $('accountPassword').value = '';
+    $('accountDialog').close();
+    await refreshCloudSession();
+    notice('Sesión iniciada. Tus próximos análisis se guardarán en tu cuenta.');
+  } catch (error) {
+    $('accountError').textContent = error.message;
+    $('accountError').hidden = false;
+  } finally { submit.disabled = false; }
+});
+$('logoutButton').addEventListener('click', async () => {
+  try {
+    await cloud.logout();
+    await refreshCloudSession();
+    notice('Sesión cerrada. Ahora estás en modo local.');
+  } catch (error) { notice('No se pudo cerrar sesión: ' + error.message, 'error'); }
+});
+$('importLocalHistory').addEventListener('click', async () => {
+  if (!state.account) return;
+  const local = loadHistory();
+  if (!local.length) return;
+  const button = $('importLocalHistory');
+  button.disabled = true;
+  let saved = 0, failed = 0;
+  // Explicit import only. Local originals remain untouched until server confirmation.
+  for (const item of local) {
+    try {
+      if (!item.id) { failed++; continue; }
+      const stored = await historyImages.get(item.id).catch(() => null);
+      await cloud.importHistoryItem(item, stored);
+      saved++;
+    } catch (error) { failed++; if (failed > 5) break; }
+  }
+  try { await refreshCloudHistory(); }
+  catch { notice('Los registros se importaron, pero no se pudo actualizar el historial.', 'error'); }
+  button.disabled = false;
+  notice(`Importación: ${saved} registros procesados${failed ? `; ${failed} pendientes o con error` : ''}. Los originales siguen disponibles en este navegador.`, failed ? 'error' : 'success');
+});
+
 window.addEventListener('hashchange', () => navigate());
 $('activityPeriod').addEventListener('change', renderDashboard);
 ['historySearch', 'historyStatus', 'historyDate'].forEach(id => $(id).addEventListener('input', () => { state.historyPage = 1; renderHistory(); }));
@@ -612,10 +751,17 @@ $('historyDetailImage').addEventListener('error', () => {
 });
 $('clearHistoryDialog').addEventListener('close', async () => {
   if ($('clearHistoryDialog').returnValue !== 'clear') return;
-  state.history = []; persistHistory(); refreshData(); notice('Historial borrado. El panel se ha actualizado.');
-  $('historyDetailDialog').close();
-  try { await historyImages.clear(); }
-  catch { notice('El historial se borró, pero no se pudieron eliminar sus fotografías. Vuelve a intentarlo.', 'error'); }
+  try {
+    if (state.account) {
+      await cloud.clearHistory();
+      await refreshCloudHistory();
+    } else {
+      state.history = []; persistHistory(); refreshData();
+      await historyImages.clear();
+    }
+    $('historyDetailDialog').close();
+    notice('Historial borrado. El panel se ha actualizado.');
+  } catch (error) { notice('No se pudo borrar todo el historial: ' + error.message, 'error'); }
 });
 $('exportHistory').addEventListener('click', () => {
   const blob = new Blob([csvContent(filteredHistory())], { type: 'text/csv;charset=utf-8' });
@@ -654,7 +800,7 @@ $('loadMoreRejections').addEventListener('click', () => { rejectionLimit += 50; 
 $('clearRejections').addEventListener('click', () => { $('clearRejectionsDialog').returnValue = ''; $('clearRejectionsDialog').showModal(); });
 $('clearRejectionsDialog').addEventListener('close', async () => {
   if ($('clearRejectionsDialog').returnValue !== 'clear') return;
-  try { await rejectionStore.clear(); rejectionLimit = 50; await renderRejections(); }
+  try { if (state.account) await cloud.clearRejections(); else await rejectionStore.clear(); clearRejectionCards(); rejectionLimit = 50; await renderRejections(); }
   catch { notice('No se pudieron borrar las capturas. Inténtalo de nuevo.', 'error'); }
 });
 $('voiceEnabled').addEventListener('change', () => {
@@ -674,6 +820,7 @@ $('settingsForm').addEventListener('submit', async event => {
   event.preventDefault();
   try {
     const url = validApiUrl($('apiUrl').value.trim());
+    if (state.account && new URL(url).origin !== location.origin) throw new Error('La sincronización privada requiere el servidor de esta página.');
     stopCamera(); cancelAnalysis(null); api.cancel(); api = new ApiClient(url); state.apiReady = false;
     state.limits = { image_mb: CONFIG.MAX_IMAGE_SIZE_MB, batch_files: CONFIG.MAX_BATCH_FILES, batch_mb: CONFIG.MAX_BATCH_SIZE_MB };
     try { localStorage.setItem(API_KEY, url); } catch { /* The session still uses this server. */ }
@@ -681,12 +828,12 @@ $('settingsForm').addEventListener('submit', async event => {
     $('settingsDialog').close(); syncControls(); await health();
   } catch (error) { $('settingsError').textContent = error.message; $('settingsError').hidden = false; }
 });
-window.addEventListener('storage', event => { if (event.key === HISTORY_KEY || event.key === null) { state.history = loadHistory(); refreshData(); } });
+window.addEventListener('storage', event => { if (!state.account && (event.key === HISTORY_KEY || event.key === null)) { state.history = loadHistory(); refreshData(); } });
 window.addEventListener('pagehide', () => { cancelAnalysis(null); stopCamera(); api.cancel(); resetPreview(); });
 window.addEventListener('pageshow', event => {
   if (event.persisted) { if (state.files.length) showPreview(state.files[0]); syncControls(); health(); }
 });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { renderDashboard(); health(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { renderDashboard(); health(); if (state.account) refreshCloudHistory().catch(() => {}); } });
 $('todayLabel').textContent = new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
-syncVoiceStatus(); refreshData(); syncControls(); navigate(true); health(); renderRejections();
+syncVoiceStatus(); syncStorageUI(); refreshData(); syncControls(); navigate(true); health(); refreshCloudSession({ quiet: true });
 setInterval(() => { if (document.visibilityState !== 'hidden') health(); }, 30000);
