@@ -60,7 +60,11 @@ PUBLIC_ORIGIN=https://bananavision-ai-production.up.railway.app
 BV_SIGNUP_ENABLED=true
 ```
 
-**Uso:** crea una cuenta desde «Iniciar sesión» (contraseña mínima de 12 caracteres). Los nuevos análisis manuales y sus fotografías se guardan automáticamente en tu cuenta; las lecturas continuas no crean muestras nuevas, y solo los fotogramas NO APTO se almacenan como capturas especiales. Para ver los resultados desde otro dispositivo, inicia sesión con la misma cuenta.
+**Uso:** crea una cuenta desde «Iniciar sesión» (contraseña mínima de 12 caracteres). Comprueba que tu correo aparezca en la barra superior y que el aviso diga «Guardado en la nube activado». Los análisis de imágenes y sus fotografías se guardan automáticamente en tu cuenta.
+
+**Cámara:** al iniciar la cámara, el modo continuo realiza lecturas temporales, que no son muestras físicas distintas y no se agregan automáticamente al historial. Pulsa **«Guardar muestra en historial»** para detener el modo continuo, fotografiar y analizar una muestra concreta y guardarla en el historial (nube con sesión iniciada; navegador en modo local). Los fotogramas automáticos NO APTO se conservan por separado en la galería de capturas especiales (máximo 200).
+
+Al guardar, la interfaz muestra un mensaje que distingue **guardado en la nube** de **guardado en este navegador**. Para consultar los resultados desde otro dispositivo, inicia sesión con la misma cuenta. Una pantalla de resultado no es una confirmación de guardado hasta recibir el aviso correspondiente.
 
 **Datos existentes:** los resultados almacenados anteriormente en el navegador no se suben sin consentimiento. Tras iniciar sesión, abre Historial → «Importar historial local». La importación es idempotente para los registros que tengan identificador y conserva los originales del navegador.
 
