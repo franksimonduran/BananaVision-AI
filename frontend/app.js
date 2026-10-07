@@ -4,7 +4,7 @@ import ExportAlert from './voice.js?v=20261006-8';
 import RejectionStore from './rejections.js';
 import HistoryImages from './history-images.js';
 import CloudClient from './cloud.js?v=20261007-1';
-import { API_KEY, HISTORY_KEY, VOICE_KEY, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261006-15';
+import { API_KEY, HISTORY_KEY, VOICE_KEY, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261007-7';
 import { renderActivity, renderDistribution, renderConfidence } from './charts.js?v=20261006-6';
 
 const $ = id => document.getElementById(id);
