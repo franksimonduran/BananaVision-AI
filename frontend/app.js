@@ -82,7 +82,8 @@ function syncStorageUI() {
   $('clearRejectionsDescription').textContent = enabled
     ? 'Se eliminarán las capturas NO APTO automáticas de la galería y también del historial en la nube. Las muestras manuales se conservan.'
     : 'Se eliminarán las fotografías de la galería local. El historial de resultados se conserva.';
-  $('importLocalHistory').hidden = !enabled || !loadHistory().length;
+  $('importLocalHistory').hidden = !enabled;
+  $('importLocalHistory').textContent = 'Importar datos anteriores';
 }
 
 async function refreshCloudHistory() {
@@ -735,23 +736,40 @@ async function openSettings() {
 $('importLocalHistory').addEventListener('click', async () => {
   if (!state.account) return;
   const local = loadHistory();
-  if (!local.length) return;
+  const previousCamera = await rejectionStore.snapshot(RejectionStore.MAX_CAPTURES)
+    .catch(() => ({items: [], total: 0}));
+  if (!local.length && !previousCamera.items.length) {
+    notice('No se encontraron análisis ni capturas NO APTO anteriores en este navegador.');
+    return;
+  }
   const button = $('importLocalHistory');
   button.disabled = true;
   let saved = 0, failed = 0;
-  // Explicit import only. Local originals remain untouched until server confirmation.
-  for (const item of local) {
-    try {
-      if (!item.id) { failed++; continue; }
-      const stored = await historyImages.get(item.id).catch(() => null);
-      await cloud.importHistoryItem(item, stored);
-      saved++;
-    } catch (error) { failed++; if (failed > 5) break; }
-  }
-  try { await refreshCloudHistory(); }
-  catch { notice('Los registros se importaron, pero no se pudo actualizar el historial.', 'error'); }
-  button.disabled = false;
-  notice(`Importación: ${saved} registros procesados${failed ? `; ${failed} pendientes o con error` : ''}. Los originales siguen disponibles en este navegador.`, failed ? 'error' : 'success');
+  // Explicit import only; original local records are never removed.
+  try {
+    const oldRecords = local.map(item => ({item, loadImage: () => historyImages.get(item.id)}));
+    const oldRejections = previousCamera.items.map(capture => ({
+      item: {
+        id: capture.id, name: 'Captura NO APTO anterior', label: 'NO APTO',
+        confidence: capture.confidence, inference_time_ms: 0,
+        timestamp: capture.timestamp,
+      },
+      loadImage: async () => ({blob: capture.blob, data: {label: 'NO APTO'}}),
+    }));
+    for (const record of [...oldRecords, ...oldRejections]) {
+      try {
+        if (!record.item.id) { failed++; continue; }
+        const stored = await record.loadImage().catch(() => null);
+        await cloud.importHistoryItem(record.item, stored);
+        saved++;
+      } catch { failed++; }
+    }
+    await refreshCloudHistory();
+    notice(`Importación: ${saved} registros incorporados${failed ? `; ${failed} no se pudieron importar` : ''}. Los originales siguen en este navegador.`,
+      failed ? 'error' : 'success');
+  } catch (error) {
+    notice('La importación se interrumpió: ' + error.message, 'error');
+  } finally { button.disabled = false; }
 });
 
 window.addEventListener('hashchange', () => navigate());
