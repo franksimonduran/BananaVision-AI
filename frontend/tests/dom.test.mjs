@@ -59,3 +59,16 @@ test('no se muestra inicio/cierre de sesión ni textos informativos eliminados',
   assert.doesNotMatch(app, /Sin inicio de sesión: los NO APTO de la cámara continua se guardan automáticamente/);
   assert.doesNotMatch(html, /historySaveStatus/);
 });
+
+
+test('no se muestra estado del modelo en cabecera ni ficha de arquitectura', () => {
+  for (const id of ['connectionStatus', 'statusDot', 'statusText', 'modelDetails']) {
+    assert.ok(!known.has(id), 'Elemento ocultado que no debe permanecer: ' + id);
+  }
+  for (const id of ['sidebarStatusDot', 'sidebarStatusText', 'serviceBanner', 'retryConnection']) {
+    assert.ok(known.has(id), 'El indicador técnico de servicio debe conservarse: ' + id);
+  }
+  assert.doesNotMatch(app, /MobileNetV2|Teachable Machine|Sin métricas de validación independiente/);
+  assert.doesNotMatch(app, /modelInfo\(\)/);
+  assert.match(app, /\$\('sidebarStatusText'\)\.textContent/);
+});

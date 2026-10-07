@@ -688,8 +688,8 @@ async function health() {
     const data = await client.health();
     if (client !== api) return;
     state.apiReady = data.model_loaded === true;
-    $('statusDot').className = `dot ${state.apiReady ? 'ok' : 'error'}`;
-    $('statusText').textContent = state.apiReady ? 'Modelo conectado' : 'Modelo no disponible';
+    $('sidebarStatusDot').className = `dot ${state.apiReady ? 'ok' : 'error'}`;
+    $('sidebarStatusText').textContent = state.apiReady ? 'Modelo conectado' : 'Modelo no disponible';
     $('serviceBanner').hidden = state.apiReady;
     if (!state.apiReady) {
       $('realtime').checked = false;
@@ -701,33 +701,21 @@ async function health() {
   } catch (error) {
     if (client === api && !error.cancelled) {
       state.apiReady = false; $('realtime').checked = false;
-      $('statusDot').className = 'dot error'; $('statusText').textContent = 'Sin conexión';
+      $('sidebarStatusDot').className = 'dot error'; $('sidebarStatusText').textContent = 'Sin conexión';
       $('serviceMessage').textContent = 'Inicia python app.py o revisa la dirección en Conexión y modelo. Tu muestra permanece disponible.';
       $('serviceBanner').hidden = false;
     }
   } finally {
     if (healthBusy === client) healthBusy = null;
-    $('sidebarStatusText').textContent = $('statusText').textContent;
-    $('sidebarStatusDot').className = $('statusDot').className;
     syncControls();
   }
 }
 
-let detailsTicket = 0;
-async function openSettings() {
-  const ticket = ++detailsTicket, client = api;
-  $('apiUrl').value = api.baseUrl; $('settingsError').hidden = true;
-  $('settingsDialog').showModal(); $('modelDetails').textContent = 'Comprobando modelo…';
-  try {
-    const model = await client.modelInfo();
-    if (ticket !== detailsTicket || client !== api || !$('settingsDialog').open) return;
-    if (!Array.isArray(model.input_shape) || !Number.isFinite(model.parameters)) throw new Error('Metadatos inválidos');
-    $('modelDetails').textContent = `${model.model_name} · ${model.parameters.toLocaleString('es-PE')} parámetros · Entrada ${model.input_shape.join(' × ')} · Sin métricas de validación independiente.`;
-  } catch {
-    if (ticket === detailsTicket && client === api && $('settingsDialog').open) $('modelDetails').textContent = 'No se pudo consultar el modelo. Comprueba que el servidor esté iniciado.';
-  }
+function openSettings() {
+  $('apiUrl').value = api.baseUrl;
+  $('settingsError').hidden = true;
+  $('settingsDialog').showModal();
 }
-
 
 $('importLocalHistory').addEventListener('click', async () => {
   if (!state.account) return;
@@ -847,10 +835,8 @@ alertVoice.speech?.addEventListener?.('voiceschanged', syncVoiceStatus);
 $('readingSelect').addEventListener('change', event => showReading(Number(event.target.value)));
 $('dismissNotice').addEventListener('click', () => { $('notice').hidden = true; });
 $('retryConnection').addEventListener('click', health);
-$('connectionStatus').addEventListener('click', health);
 $('openHelp').addEventListener('click', () => $('helpDialog').showModal());
 document.querySelectorAll('[data-settings]').forEach(button => button.addEventListener('click', openSettings));
-$('settingsDialog').addEventListener('close', () => { detailsTicket++; });
 $('settingsForm').addEventListener('submit', async event => {
   event.preventDefault();
   try {
@@ -859,7 +845,7 @@ $('settingsForm').addEventListener('submit', async event => {
     stopCamera(); cancelAnalysis(null); api.cancel(); api = new ApiClient(url); state.apiReady = false;
     state.limits = { image_mb: CONFIG.MAX_IMAGE_SIZE_MB, batch_files: CONFIG.MAX_BATCH_FILES, batch_mb: CONFIG.MAX_BATCH_SIZE_MB };
     try { localStorage.setItem(API_KEY, url); } catch { /* The session still uses this server. */ }
-    $('statusText').textContent = 'Conectando…'; $('statusDot').className = 'dot';
+    $('sidebarStatusText').textContent = 'Conectando…'; $('sidebarStatusDot').className = 'dot';
     $('settingsDialog').close(); syncControls(); await health();
   } catch (error) { $('settingsError').textContent = error.message; $('settingsError').hidden = false; }
 });
