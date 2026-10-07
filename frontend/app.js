@@ -209,7 +209,7 @@ async function renderRejections() {
     $('rejectionEmpty').hidden = total > 0;
     $('clearRejections').disabled = total === 0;
     $('loadMoreRejections').hidden = items.length >= total;
-    $('rejectionCapacity').textContent = rejectionStorageError || `${items.length} de ${total} capturas · ${state.account ? 'Guardadas en la nube' : 'Guardadas en este navegador'} · máximo ${RejectionStore.MAX_CAPTURES}`;
+    $('rejectionCapacity').textContent = rejectionStorageError || `${items.length} de ${total} capturas recientes · ${state.account ? 'Guardadas en la nube y en Historial' : 'Guardadas en este navegador y en Historial'} · se muestran hasta ${RejectionStore.MAX_CAPTURES}`;
     const visible = new Set(items.map(item => item.id));
     for (const [id, card] of rejectionCards) {
       if (!visible.has(id)) { URL.revokeObjectURL(card.url); card.node.remove(); rejectionCards.delete(id); }
@@ -227,7 +227,7 @@ async function renderRejections() {
         const actions = document.createElement('div'); actions.className = 'rejection-actions';
         const download = document.createElement('a'); download.href = url; download.download = `no-apto-${item.timestamp.replace(/[:.]/g, '-')}-${item.id.slice(0, 8)}.jpg`; download.className = 'text-link'; download.textContent = 'Descargar JPG';
         const remove = document.createElement('button'); remove.className = 'text-button danger-text'; remove.textContent = 'Eliminar'; remove.setAttribute('aria-label', `Eliminar captura del ${formatDate(item.timestamp)}`);
-        remove.addEventListener('click', async () => { try { if (state.account) await cloud.removeRejection(item.id); else await rejectionStore.remove(item.id); await renderRejections(); } catch { notice('No se pudo eliminar la captura. Inténtalo de nuevo.', 'error'); } });
+        remove.addEventListener('click', async () => { try { if (state.account) { await cloud.removeRejection(item.id); await refreshCloudHistory(); } else await rejectionStore.remove(item.id); await renderRejections(); } catch { notice('No se pudo eliminar la captura. Inténtalo de nuevo.', 'error'); } });
         actions.append(download, remove); details.append(title, time, confidence, actions); node.append(image, details);
         card = { url, node }; rejectionCards.set(item.id, card);
       }
@@ -235,7 +235,7 @@ async function renderRejections() {
       if (current !== card.node) $('rejectionGallery').insertBefore(card.node, current || null);
     });
   } catch {
-    if (ticket === rejectionTicket) $('rejectionCapacity').textContent = 'No se pudo acceder a las capturas guardadas. Comprueba el almacenamiento del navegador.';
+    if (ticket === rejectionTicket) $('rejectionCapacity').textContent = 'No se pudieron consultar las capturas. Comprueba la conexión y el almacenamiento.';
   }
 }
 
@@ -591,19 +591,37 @@ async function analyze(continuous = false) {
     if (state.job !== job) return;
     if (!Array.isArray(results) || results.length !== inputs.length) throw new Error('El servidor devolvió un lote incompleto.');
     results.forEach(validateResult);
-    state.readings = results.map((data, index) => ({ id: data.record_id || crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
+    state.readings = results.map((data, index) => ({ id: data.record_id || data.capture_id || crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
     state.readings.forEach(reading => {
       state.sessionTotal++; // lecturas de la sesión (incluye las automáticas)
-      // Las lecturas del modo continuo no son muestras nuevas: no se guardan en el historial.
-      if (!continuous && !state.account) state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200), label: reading.data.label, confidence: reading.data.confidence, inference_time_ms: reading.data.inference_time_ms, timestamp });
+      // A NO APTO continuous frame is a recorded event; other frames are transient.
+      if ((!continuous || reading.data.label === 'NO APTO') && !state.account) {
+        state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200),
+          label: reading.data.label, confidence: reading.data.confidence,
+          inference_time_ms: reading.data.inference_time_ms, timestamp });
+      }
       saveRejectedReading(reading);
     });
-    if (!continuous && !state.account) state.history = state.history.slice(0, CONFIG.MAX_HISTORY);
+    if (!state.account) state.history = state.history.slice(0, CONFIG.MAX_HISTORY);
     $('readingSelect').replaceChildren(...state.readings.map((reading, index) => {
       const option = document.createElement('option'); option.value = String(index); option.textContent = `${index + 1}. ${reading.name} · ${exportLabel(reading.data.label)}`; return option;
     }));
     $('readingPicker').hidden = state.readings.length < 2; showReading(0);
     alertExportResults(results, continuous);
+    if (continuous && results.some(data => data.label === 'NO APTO')) {
+      if (state.account) {
+        if (!results.filter(data => data.label === 'NO APTO').every(data => typeof data.capture_id === 'string' && data.capture_id)) {
+          throw new Error('Un NO APTO no pudo guardarse en el servidor. Comprueba la conexión.');
+        }
+        await refreshCloudHistory();
+      } else {
+        persistHistory();
+        refreshData();
+        const rejected = state.readings.filter(reading => reading.data.label === 'NO APTO');
+        try { await historyImages.save(rejected, state.history); }
+        catch { notice('El NO APTO figura en Historial, pero no se pudo guardar su fotografía local.', 'error'); }
+      }
+    }
     if (!continuous) {
       if (state.account) {
         if (!results.every(data => typeof data.record_id === 'string' && data.record_id)) {
@@ -754,7 +772,9 @@ $('clearHistoryDialog').addEventListener('close', async () => {
   try {
     if (state.account) {
       await cloud.clearHistory();
+      clearRejectionCards();
       await refreshCloudHistory();
+      await renderRejections();
     } else {
       state.history = []; persistHistory(); refreshData();
       await historyImages.clear();
@@ -801,7 +821,7 @@ $('loadMoreRejections').addEventListener('click', () => { rejectionLimit += 50; 
 $('clearRejections').addEventListener('click', () => { $('clearRejectionsDialog').returnValue = ''; $('clearRejectionsDialog').showModal(); });
 $('clearRejectionsDialog').addEventListener('close', async () => {
   if ($('clearRejectionsDialog').returnValue !== 'clear') return;
-  try { if (state.account) await cloud.clearRejections(); else await rejectionStore.clear(); clearRejectionCards(); rejectionLimit = 50; await renderRejections(); }
+  try { if (state.account) { await cloud.clearRejections(); await refreshCloudHistory(); } else await rejectionStore.clear(); clearRejectionCards(); rejectionLimit = 50; await renderRejections(); }
   catch { notice('No se pudieron borrar las capturas. Inténtalo de nuevo.', 'error'); }
 });
 $('voiceEnabled').addEventListener('change', () => {
