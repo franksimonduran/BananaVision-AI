@@ -32,7 +32,7 @@ test('fuente e imágenes son recursos locales existentes y no hay métricas fict
 
 test('la cámara permite guardar una muestra manual sin almacenar todos los fotogramas continuos', () => {
   assert.ok(known.has('saveCameraSample'));
-  assert.ok(known.has('historySaveStatus'));
+  assert.ok(!known.has('historySaveStatus'));
   assert.match(app, /saveCameraSampleToHistory\(\)/);
   assert.match(app, /state\.realtimeWanted = false/);
   assert.match(app, /await analyze\(false\)/);
@@ -52,4 +52,10 @@ test('cada NO APTO del modo continuo se registra en el historial automáticament
   assert.match(app, /continuous && results\.some\(data => data\.label === 'NO APTO'\)/);
   assert.match(app, /await refreshCloudHistory\(\)/);
   assert.match(app, /await historyImages\.save\(rejected, state\.history\)/);
+});
+
+test('no se muestra inicio/cierre de sesión ni textos informativos eliminados', () => {
+  assert.doesNotMatch(html, /Cerrar sesión|Todos los resultados NO APTO del análisis continuo se guardan automáticamente/);
+  assert.doesNotMatch(app, /Sin inicio de sesión: los NO APTO de la cámara continua se guardan automáticamente/);
+  assert.doesNotMatch(html, /historySaveStatus/);
 });
