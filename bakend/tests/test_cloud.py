@@ -113,7 +113,7 @@ def test_auth_bad_password_duplicate_signout_and_csrf(environment):
     assert api.get("/cloud/me").json()["user"]["email"] == "test@example.com"
 
 
-def test_cloud_rejections_are_separate_and_deleteable(environment):
+def test_cloud_rejections_also_appear_in_history_and_can_be_deleted(environment):
     svc, app = environment
     api = client(app)
     user = register(api, "cam@example.com")
@@ -121,9 +121,12 @@ def test_cloud_rejections_are_separate_and_deleteable(environment):
     saved = api.get("/cloud/rejections?limit=50")
     assert saved.status_code == 200 and saved.json()["total"] == 1
     assert api.get(f"/cloud/rejections/{scan_id}/image").status_code == 200
-    assert api.get("/cloud/history").json() == []
+    history = api.get("/cloud/history").json()
+    assert len(history) == 1 and history[0]["id"] == scan_id
+    assert api.get(f"/cloud/history/{scan_id}/image").status_code == 200
     assert api.delete(f"/cloud/rejections/{scan_id}").json()["deleted"] == 1
     assert api.get("/cloud/rejections").json()["total"] == 0
+    assert api.get("/cloud/history").json() == []
 
 
 def test_import_browser_history_idempotently_even_without_photo(environment):
@@ -211,4 +214,45 @@ def test_prediction_api_saves_trusted_model_result_and_camera_rejections(environ
     assert rejected_frame.status_code == 200, rejected_frame.text
     assert rejected_frame.json()["capture_id"]
     assert api.get("/cloud/rejections").json()["total"] == 1
-    assert len(api.get("/cloud/history").json()) == 1
+    assert len(api.get("/cloud/history").json()) == 2
+
+
+
+def test_private_anonymous_browsers_save_history_without_login(environment, monkeypatch):
+    svc, app = environment
+    monkeypatch.setenv("BV_ANONYMOUS_ONLY", "true")
+    first = client(app)
+    second = client(app)
+    assert first.get("/cloud/me").json()["user"] is None
+    answer = first.post("/cloud/anonymous")
+    assert answer.status_code == 200, answer.text
+    guest = answer.json()["user"]
+    assert guest["anonymous"] is True
+    assert "httponly" in answer.headers["set-cookie"].lower()
+    assert "samesite=lax" in answer.headers["set-cookie"].lower()
+    assert "max-age=31536000" in answer.headers["set-cookie"].lower()
+    assert first.get("/cloud/me").json()["user"]["id"] == guest["id"]
+    assert first.post("/cloud/anonymous").json()["user"]["id"] == guest["id"]
+
+    assert first.post("/cloud/register", json={
+        "email": "person@example.com", "password": "long-strong-password"
+    }).status_code == 404
+    assert first.post("/cloud/login", json={
+        "email": "person@example.com", "password": "long-strong-password"
+    }).status_code == 404
+    assert first.post("/cloud/logout").status_code == 404
+
+    capture_id = svc.store(guest["id"], "rejection", photo(), "camera.jpg", ExamplePrediction())
+    assert len(first.get("/cloud/history").json()) == 1
+    assert first.get(f"/cloud/history/{capture_id}").status_code == 200
+    assert first.get(f"/cloud/history/{capture_id}/image").status_code == 200
+
+    assert second.get("/cloud/history").status_code == 401
+    other_user = second.post("/cloud/anonymous").json()["user"]
+    assert other_user["id"] != guest["id"]
+    assert second.get("/cloud/history").json() == []
+    assert second.get(f"/cloud/history/{capture_id}/image").status_code == 404
+    assert second.delete("/cloud/history").json()["deleted"] == 0
+    assert first.get("/cloud/history").json()[0]["id"] == capture_id
+    assert first.delete("/cloud/history").json()["deleted"] == 1
+    assert svc.s3.objects == {}
