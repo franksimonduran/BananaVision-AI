@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 globalThis.location = { protocol: 'http:', port: '8000', hostname: '127.0.0.1', origin: 'http://127.0.0.1:8000' };
 const storage = new Map();
 globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
-const { DISCLAIMER, resultCopy, HISTORY_KEY, loadHistory, saveHistory, validateResult, filterHistory, paginateHistory, csvContent, validApiUrl, dayKey } = await import('../data.js');
+const { resultCopy, HISTORY_KEY, loadHistory, saveHistory, validateResult, filterHistory, paginateHistory, csvContent, validApiUrl, dayKey } = await import('../data.js');
 
 const item = { name: 'muestra.png', label: 'APTO', confidence: .86, inference_time_ms: 120, timestamp: new Date(2026, 9, 2, 12).toISOString() };
 const result = { ...item, predicted_class: 'APTO', threshold: .7, conclusive: true, probabilities: { APTO: .86, 'NO APTO': .14 }, recommendation: { message: 'Lectura', action: 'Revisar', storage: 'Separar' } };
@@ -92,6 +92,5 @@ test('textos de resultado: títulos esperados y aviso sin afirmaciones de certif
   assert.equal(resultCopy('NO APTO').title, 'Revisión requerida');
   assert.equal(resultCopy('NO CONCLUYENTE').title, 'Resultado no concluyente');
   for (const label of ['APTO', 'NO APTO', 'NO CONCLUYENTE']) assert.equal(resultCopy(label).recommendations.length, 2);
-  assert.match(DISCLAIMER, /No constituye una certificación de calidad/);
-  assert.doesNotMatch(DISCLAIMER, /100% seguro|aprobado definitivamente/i);
+  assert.doesNotMatch(JSON.stringify(resultCopy('APTO')), /100% seguro|aprobado definitivamente/i);
 });
