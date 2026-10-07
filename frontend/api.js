@@ -44,13 +44,17 @@ export default class ApiClient {
     } finally { clearTimeout(timeout); signal?.removeEventListener('abort', abort); this.controllers.delete(controller); }
   }
   predict(image, isBase64 = false, options = {}) {
-    if (isBase64) return this.request('/predict', { ...options, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({image}) });
+    const { persist, ...requestOptions } = options;
+    const path = persist ? '/predict?persist=' + encodeURIComponent(persist) : '/predict';
+    if (isBase64) return this.request(path, { ...requestOptions, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({image}) });
     const form = new FormData(); form.append('file', image, image.name || 'camera.jpg');
-    return this.request('/predict', { ...options, method: 'POST', body: form });
+    return this.request(path, { ...requestOptions, method: 'POST', body: form });
   }
   batch(files, options = {}) {
+    const { persist, ...requestOptions } = options;
+    const path = persist ? '/predict/batch?persist=' + encodeURIComponent(persist) : '/predict/batch';
     const form = new FormData(); files.forEach(f => form.append('files', f, f.name));
-    return this.request('/predict/batch', { ...options, method: 'POST', body: form });
+    return this.request(path, { ...requestOptions, method: 'POST', body: form });
   }
   health() { return this.request('/health', { allowUnavailable: true, cache: 'no-store' }); }
   modelInfo() { return this.request('/model/info'); }

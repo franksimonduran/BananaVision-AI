@@ -746,3 +746,32 @@ dialog .button-primary { width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Cloud account controls: keep the existing desktop/mobile layout intact. */
+.account-trigger {
+  display: inline-flex; align-items: center; gap: .45rem; max-width: 210px;
+  border: 1px solid rgba(11, 77, 55, .18); border-radius: 12px;
+  background: #f3faf5; color: #11523e; padding: .53rem .85rem;
+  font: 700 .78rem Manrope, sans-serif; cursor: pointer;
+}
+.account-trigger svg { width: 17px; height: 17px; flex: none; }
+.account-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-trigger:hover { background: #e4f4e9; }
+.account-logout { flex: none; font-size: .75rem; }
+.account-dialog { width: min(430px, calc(100% - 26px)); border: 1px solid #e1ece3; border-radius: 22px; padding: 2.3rem; box-shadow: 0 26px 90px rgba(9,47,33,.22); }
+.account-dialog::backdrop { background: rgba(3, 23, 19, .65); backdrop-filter: blur(5px); }
+.account-description { color: #51675b; font-size: .88rem; margin: .6rem 0 1.25rem; line-height: 1.55; }
+.account-form { display: grid; gap: .55rem; }
+.account-form label { color: #275543; font-size: .8rem; font-weight: 700; }
+.account-form input { width: 100%; box-sizing: border-box; border: 1px solid #c7dccc; border-radius: 10px; padding: .79rem .85rem; margin-bottom: .55rem; font: inherit; }
+.account-form input:focus-visible, .account-trigger:focus-visible { outline: 3px solid #a1d2a8; outline-offset: 2px; }
+.account-form .button { width: 100%; justify-content: center; margin-top: .6rem; }
+.account-switch { display: block; margin: 1rem auto 0; }
+.account-privacy { font-size: .71rem; text-align: center; color: #66776d; margin: 1.1rem 0 0; }
+.cloud-history-actions { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .account-trigger { padding: .5rem; max-width: 132px; }
+  .account-logout { padding: .4rem; }
+  .cloud-history-actions { width: 100%; }
+  .cloud-history-actions .button { flex: 1; }
+}

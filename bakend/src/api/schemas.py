@@ -20,6 +20,8 @@ class PredictResponse(BaseModel):
     recommendation: Recommendation
     inference_time_ms: float = Field(ge=0)
     scope: str = 'Evaluación visual preliminar; no certifica seguridad alimentaria.'
+    record_id: str | None = None
+    capture_id: str | None = None
 class ModelInfo(BaseModel):
     input_shape: list[int]
     classes: list[str]
