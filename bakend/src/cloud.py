@@ -105,7 +105,7 @@ class CloudService:
         self.s3 = s3 or boto3.client(
             "s3", endpoint_url=endpoint, region_name=region,
             aws_access_key_id=access_key, aws_secret_access_key=secret_key,
-            config=S3Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+            config=S3Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
         )
         Base.metadata.create_all(self.engine)
 
