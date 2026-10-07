@@ -1,0 +1,41 @@
+name: BananaVision cloud and regression tests
+
+on:
+  push:
+    branches: [cloud-history-auth]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate source syntax
+        run: |
+          python -m compileall -q bakend/src bakend/tests
+          node --check frontend/app.js
+          node --check frontend/api.js
+          node --check frontend/cloud.js
+          node --check frontend/data.js
+      - name: Frontend regression
+        run: |
+          node frontend/tests/data.test.mjs
+          node frontend/tests/api.test.mjs
+          node frontend/tests/voice.test.mjs
+          node frontend/tests/dom.test.mjs
+      - name: Backend integration regression
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r bakend/requirements.txt -r bakend/requirements-dev.txt
+          cd bakend
+          python -m pytest -q tests
