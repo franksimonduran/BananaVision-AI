@@ -17,6 +17,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r /app/bakend/requirements.txt
 
 COPY bakend /app/bakend
+COPY Modelo/metadata.json /app/Modelo/metadata.json
 COPY frontend /app/frontend
 
 WORKDIR /app/bakend
