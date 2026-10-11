@@ -34,7 +34,7 @@ test('prioriza voces naturales en español sobre voces básicas o de otro idioma
     { lang: 'es-MX', name: 'Español Natural' },
   ]);
   const alert = new ExportAlert({ speech, Utterance: UtteranceStub });
-  alert.speak('Atención, producto no apto para exportación.');
+  alert.speak('Atención, plátano no apto para exportación.');
   assert.equal(speech.spoken[0].voice.name, 'Español Natural');
   assert.equal(speech.spoken[0].lang, 'es-MX');
   assert.equal(speech.spoken[0].rate, 0.95);
@@ -45,12 +45,12 @@ test('no interrumpe ni encola avisos mientras otra advertencia está sonando', (
   const speech = speechStub();
   const alert = new ExportAlert({ speech, Utterance: UtteranceStub });
   speech.speaking = true;
-  assert.equal(alert.speak('Advertencia: producto no apto para exportación.'), false);
+  assert.equal(alert.speak('Advertencia: plátano no apto para exportación.'), false);
   speech.speaking = false;
   speech.pending = true;
-  assert.equal(alert.speak('Advertencia: producto no apto para exportación.'), false);
+  assert.equal(alert.speak('Advertencia: plátano no apto para exportación.'), false);
   speech.pending = false;
-  assert.equal(alert.speak('Advertencia: producto no apto para exportación.'), true);
+  assert.equal(alert.speak('Advertencia: plátano no apto para exportación.'), true);
   assert.equal(speech.spoken.length, 1);
   assert.equal(speech.cancelled, 0);
 });
