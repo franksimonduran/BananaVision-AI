@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import io
 import json
@@ -26,10 +27,14 @@ class ModelLoader:
 
     def _load_head_weights(self):
         parts_dir = BASE / 'model' / 'three_class_head'
-        parts = sorted(parts_dir.glob('part-*.bin'))
+        parts = sorted(parts_dir.glob('part-*.b64'))
         if len(parts) != 20:
             raise ValueError('Incomplete three-class model head')
-        payload = b''.join(part.read_bytes() for part in parts)
+        encoded = ''.join(part.read_text(encoding='ascii').strip() for part in parts)
+        try:
+            payload = base64.b64decode(encoded, validate=True)
+        except Exception as exc:
+            raise ValueError('Invalid three-class model head encoding') from exc
         if hashlib.sha256(payload).hexdigest() != self.HEAD_SHA256:
             raise ValueError('Invalid three-class model head')
         with np.load(io.BytesIO(payload), allow_pickle=False) as archive:
