@@ -13,7 +13,7 @@ from ..config import BASE
 
 
 class ModelLoader:
-    HEAD_SHA256 = '96e499cc1b3dbab36fd5f749fa5290c95d1c1384562b36a722d8dd4afbf20628'
+    HEAD_SHA256 = '6a98a09d7339ec4f5661d3c62b1c0d45bab754937fcc880591bab14f38771990'
 
     def __init__(self, model_path):
         self.model_path = Path(model_path)
@@ -28,7 +28,7 @@ class ModelLoader:
     def _load_head_weights(self):
         parts_dir = BASE / 'model' / 'three_class_head'
         parts = sorted(parts_dir.glob('part-*.b64'))
-        if len(parts) != 20:
+        if len(parts) != 40:
             raise ValueError('Incomplete three-class model head')
         encoded = ''.join(part.read_text(encoding='ascii').strip() for part in parts)
         try:
