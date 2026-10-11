@@ -104,3 +104,10 @@ test('SIN PLÁTANO oculta el porcentaje de confianza', () => {
   assert.match(app, /\$\('confidenceHeading'\)\.hidden = hideConfidence/);
   assert.match(app, /\$\('confidenceProgress'\)\.hidden = hideConfidence/);
 });
+
+
+test('el resultado ya no muestra la fotografía ni textos de la lectura analizada', () => {
+  for (const id of ['resultThumbnail', 'resultSource']) assert.ok(!known.has(id));
+  assert.doesNotMatch(html, /Imagen que produjo esta lectura|MUESTRA ANALIZADA|Fotografía de esta lectura/);
+  assert.doesNotMatch(app, /resultThumbnail|resultSource|thumbnailUrl/);
+});
