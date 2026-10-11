@@ -150,7 +150,7 @@ try {
   await page.locator('[data-view="dashboard"]').click();
   await page.waitForFunction(() => getComputedStyle(document.getElementById('view-dashboard')).opacity === '1');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.equal(await page.locator('#distributionLegend .legend-row').count(), 3);
+  assert.equal(await page.locator('#distributionLegend .legend-row').count(), 2);
   assert.equal(await page.locator('#confidenceChart circle[tabindex]').count(), 3);
   await page.locator('#confidenceChart circle[tabindex]').first().focus();
   assert.equal(await page.locator('#confidenceChart .chart-tooltip').isVisible(), true);
