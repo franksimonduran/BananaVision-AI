@@ -108,7 +108,7 @@ Las imágenes sintéticas y la cámara virtual verifican integración, no precis
 
 El resultado en vivo puede ser APTO, NO APTO o SIN PLÁTANO. El historial, filtros, gráficas y CSV contienen únicamente inspecciones de plátanos: APTO y NO APTO.
 
-- Un nuevo resultado NO APTO reproduce automáticamente «Atención, producto no apto para exportación.». Un lote con resultados NO APTO produce un solo aviso; las alertas de la cámara continua respetan el intervalo mínimo de 5 segundos.
+- Un nuevo resultado NO APTO reproduce automáticamente «Atención, plátano no apto para exportación.». Un lote con resultados NO APTO produce un solo aviso; las alertas de la cámara continua respetan el intervalo mínimo de 5 segundos.
 - APTO y SIN PLÁTANO no emiten voz. Consultar historial o seleccionar lecturas de un lote tampoco habla.
 - En cámara continua se permite como máximo un aviso cada 5 segundos. No se interrumpe ni se encola otro aviso mientras la síntesis esté hablando o tenga audio pendiente.
 - El control Aviso de voz está activado por defecto y conserva la preferencia en el navegador, también desde la anterior Alarma sonora. Silenciar cancela el aviso pendiente sin ocultar las alertas visuales.
