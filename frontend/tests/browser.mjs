@@ -136,10 +136,12 @@ try {
   await page.waitForFunction(() => document.getElementById('readingSelect').options.length === 2 && !document.getElementById('readingSelect').disabled);
   const batchAlerts = await page.evaluate(() => window.testVoiceAlerts);
   assert.equal(batchAlerts.length, 1);
-  assert.equal(batchAlerts[0].text, 'Atención, producto no apto para exportación.');
+  assert.equal(batchAlerts[0].text, 'Atención, plátano no apto para exportación.');
   await page.locator('#readingSelect').selectOption('1');
   assert.equal(await page.locator('#resultSource').textContent(), 'lote-c.png');
   assert.equal(await page.locator('#resultLabel').textContent(), 'SIN PLÁTANO');
+  assert.equal(await page.locator('#confidenceHeading').isVisible(), false);
+  assert.equal(await page.locator('#confidenceProgress').isVisible(), false);
   assert.equal(await page.locator('#dashTotal').textContent(), '2');
   const mean = await page.locator('#dashTime').textContent();
   await page.locator('#readingSelect').selectOption('0');
@@ -301,7 +303,7 @@ try {
   mode = 'empty';
   await page.locator('#analyzeButton').click();
   await page.waitForFunction(() => document.getElementById('stage').getAttribute('aria-busy') === 'false' && document.getElementById('resultLabel').textContent === 'SIN PLÁTANO');
-  assert.equal(await page.locator('#resultLabel').textContent(), 'NO CONCLUYENTE');
+  assert.equal(await page.locator('#resultLabel').textContent(), 'SIN PLÁTANO');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), rejectionAlerts);
   await page.locator('#voiceEnabled').uncheck();
   await page.reload();
