@@ -77,7 +77,7 @@ test('sin métricas técnicas ni leyendas extensas en el resultado', () => {
     assert.ok(!known.has(id), 'Elemento eliminado que sigue visible: ' + id);
   }
   assert.ok(known.has('voiceEnabled'), 'El interruptor de voz debe permanecer');
-  assert.match(app, /Atención, producto no apto para exportación\./);
+  assert.match(app, /Atención, plátano no apto para exportación\./);
   assert.doesNotMatch(app, /Aviso para NO APTO · máximo cada/);
 });
 
