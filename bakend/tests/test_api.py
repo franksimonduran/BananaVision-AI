@@ -16,9 +16,9 @@ def upload(client,data=None):
 def test_real_health_info_frontend(client):
     assert client.get('/health').json()['model_loaded'] is True
     info=client.get('/model/info').json()
-    assert info['classes']==['NO APTO','APTO']
+    assert info['classes']==['APTO','NO APTO','SIN PLÁTANO']
     assert info['input_shape']==[224,224,3]
-    assert info['parameters']==538508
+    assert info['parameters']==538608
     assert 'BananaVision AI' in client.get('/').text
     assert client.get('/app.js').status_code==200
 
@@ -32,26 +32,33 @@ def test_real_prediction_and_json_parity(client):
         assert res.json()['probabilities']==a.json()['probabilities']
     d=a.json()
     assert abs(sum(d['probabilities'].values())-1)<1e-5
-    assert d['predicted_class'] in ['APTO','NO APTO']
-    assert d['conclusive']==(d['confidence']>=d['threshold'])
+    assert d['predicted_class'] in ['APTO','NO APTO','SIN PLÁTANO']
+    assert d['label']==d['predicted_class']
+    assert d['conclusive'] is True
+    assert set(d['probabilities'])=={'APTO','NO APTO','SIN PLÁTANO'}
     assert 'no certifica' in d['scope']
 
 class FixedModel:
-    def __init__(self,confidence,label='APTO'):self.confidence,self.label=confidence,label
+    def __init__(self,confidence,label='APTO'):
+        self.confidence,self.label=confidence,label
     def predict(self,arr):
         assert arr.shape==(1,224,224,3)
-        probs={self.label:self.confidence,('NO APTO' if self.label=='APTO' else 'APTO'):1-self.confidence}
+        others=[name for name in ['APTO','NO APTO','SIN PLÁTANO'] if name!=self.label]
+        remainder=(1-self.confidence)/2
+        probs={self.label:self.confidence,others[0]:remainder,others[1]:remainder}
         return self.label,self.confidence,1.5,probs
 
-def test_threshold_and_labels(client):
-    for confidence,expected in [(.699,'NO CONCLUYENTE'),(.7,'APTO'),(.98,'APTO')]:
-        app.dependency_overrides[get_loader]=lambda:FixedModel(confidence)
+def test_exact_three_labels_without_abstention(client):
+    for label,confidence in [('APTO',.40),('NO APTO',.55),('SIN PLÁTANO',.45)]:
+        app.dependency_overrides[get_loader]=lambda l=label,c=confidence:FixedModel(c,l)
         d=upload(client).json()
-        assert d['label']==expected
-        assert d['predicted_class']=='APTO'
-        assert bool(d['conclusive'])==(expected=='APTO')
-    app.dependency_overrides[get_loader]=lambda:FixedModel(.95,'NO APTO')
-    assert upload(client).json()['label']=='NO APTO'
+        assert d['label']==label
+        assert d['predicted_class']==label
+        assert d['conclusive'] is True
+        assert d['confidence']==confidence
+    # A confidence below the historical 70% threshold still returns one of the three classes.
+    app.dependency_overrides[get_loader]=lambda:FixedModel(.40,'APTO')
+    assert upload(client).json()['label']=='APTO'
 
 def test_invalid_json_and_formats(client):
     for payload in [{},{'image':'!!!'},{'image':42},{'image':''},{'image':'data:text/plain;base64,YQ=='},{'image':'YQ==','extra':1}]:
