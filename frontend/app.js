@@ -4,7 +4,7 @@ import ExportAlert from './voice.js?v=20261006-8';
 import RejectionStore from './rejections.js';
 import HistoryImages from './history-images.js';
 import CloudClient from './cloud.js?v=20261007-1';
-import { API_KEY, HISTORY_KEY, VOICE_KEY, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261007-7';
+import { API_KEY, HISTORY_KEY, VOICE_KEY, HISTORY_LABELS, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261010-1';
 import { renderActivity, renderDistribution, renderConfidence } from './charts.js?v=20261006-6';
 
 const $ = id => document.getElementById(id);
@@ -77,7 +77,7 @@ function syncStorageUI() {
 
 async function refreshCloudHistory() {
   if (!state.account) return;
-  state.history = await cloud.history();
+  state.history = (await cloud.history()).filter(item => HISTORY_LABELS.includes(item.label));
   refreshData();
 }
 
@@ -93,7 +93,7 @@ async function refreshCloudSession({ quiet = false } = {}) {
       await cloud.anonymous();
       session = await cloud.me();
     }
-    const history = session.user ? await cloud.history() : loadHistory();
+    const history = session.user ? (await cloud.history()).filter(item => HISTORY_LABELS.includes(item.label)) : loadHistory();
     if (ticket !== cloudTicket) return;
     const oldId = state.account?.id;
     state.cloudEnabled = session.enabled === true;
@@ -453,7 +453,6 @@ function showReading(index) {
   $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
   $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
   $('confidenceBar').style.width = `${data.confidence * 100}%`;
-  $('thresholdMarker').style.left = `${data.threshold * 100}%`;
   $('resultSource').textContent = reading.name; $('resultSource').title = reading.name;
   if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
   state.thumbnailUrl = URL.createObjectURL(reading.file); $('resultThumbnail').src = state.thumbnailUrl;
@@ -581,9 +580,9 @@ async function analyze(continuous = false) {
     results.forEach(validateResult);
     state.readings = results.map((data, index) => ({ id: data.record_id || data.capture_id || crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
     state.readings.forEach(reading => {
-      state.sessionTotal++; // lecturas de la sesión (incluye las automáticas)
+      if (reading.data.label !== 'SIN PLÁTANO') state.sessionTotal++; // solo muestras de plátano
       // A NO APTO continuous frame is a recorded event; other frames are transient.
-      if ((!continuous || reading.data.label === 'NO APTO') && !state.account) {
+      if (reading.data.label !== 'SIN PLÁTANO' && (!continuous || reading.data.label === 'NO APTO') && !state.account) {
         state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200),
           label: reading.data.label, confidence: reading.data.confidence,
           inference_time_ms: reading.data.inference_time_ms, timestamp });
@@ -612,11 +611,14 @@ async function analyze(continuous = false) {
     }
     if (!continuous) {
       if (state.account) {
-        if (!results.every(data => typeof data.record_id === 'string' && data.record_id)) {
+        const inspected = results.filter(data => data.label !== 'SIN PLÁTANO');
+        if (!inspected.every(data => typeof data.record_id === 'string' && data.record_id)) {
           throw new Error('No se confirmó el guardado en la nube. No se añadirá un registro ficticio al historial.');
         }
         await refreshCloudHistory();
-        notice('Muestra guardada en el historial privado de este navegador, sin iniciar sesión.');
+        notice(inspected.length
+          ? 'Muestra guardada en el historial privado de este navegador, sin iniciar sesión.'
+          : 'No se detectó un plátano. Esta lectura no se añadió al historial.');
       } else {
         persistHistory();
         refreshData();
@@ -625,11 +627,16 @@ async function analyze(continuous = false) {
     if (!continuous) $('resultAnnouncement').textContent = results.length > 1 ? `Lote completado: ${results.length} muestras. Selecciona un resultado para revisar sus recomendaciones.` : `${exportLabel(results[0].label)}. Confianza ${percentage(results[0].confidence)}. Análisis y recomendaciones disponibles.`;
     if (results.length > 1) notice(`Lote completado: ${results.length} muestras. Selecciona cada lectura para revisar su imagen y recomendaciones.`);
     if (!continuous && !state.account) {
-      try {
-        await historyImages.save(state.readings, state.history);
-        notice('Muestra guardada en el historial local de este navegador, sin iniciar sesión.');
-      } catch {
-        notice('La muestra figura en el historial local, pero no se pudo guardar su fotografía.', 'error');
+      const inspected = state.readings.filter(reading => reading.data.label !== 'SIN PLÁTANO');
+      if (!inspected.length) {
+        notice('No se detectó un plátano. Esta lectura no se añadió al historial.');
+      } else {
+        try {
+          await historyImages.save(inspected, state.history);
+          notice('Muestra guardada en el historial local de este navegador, sin iniciar sesión.');
+        } catch {
+          notice('La muestra figura en el historial local, pero no se pudo guardar su fotografía.', 'error');
+        }
       }
     }
   } catch (error) {

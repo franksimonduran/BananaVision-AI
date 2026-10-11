@@ -7,7 +7,7 @@ globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (
 const { resultCopy, HISTORY_KEY, loadHistory, saveHistory, validateResult, filterHistory, paginateHistory, csvContent, validApiUrl, dayKey } = await import('../data.js');
 
 const item = { name: 'muestra.png', label: 'APTO', confidence: .86, inference_time_ms: 120, timestamp: new Date(2026, 9, 2, 12).toISOString() };
-const result = { ...item, predicted_class: 'APTO', threshold: .7, conclusive: true, probabilities: { APTO: .86, 'NO APTO': .14 }, recommendation: { message: 'Lectura', action: 'Revisar', storage: 'Separar' } };
+const result = { ...item, predicted_class: 'APTO', threshold: .7, conclusive: true, probabilities: { APTO: .86, 'NO APTO': .10, 'SIN PLÁTANO': .04 }, recommendation: { message: 'Lectura', action: 'Revisar', storage: 'Separar' } };
 
 test('preserva los registros existentes y descarta almacenamiento inválido', () => {
   storage.set(HISTORY_KEY, JSON.stringify([item, { ...item, confidence: 3 }, { ...item, timestamp: 'invalid' }, { ...item, label: 'OTHER' }]));
@@ -60,15 +60,15 @@ test('los filtros y el CSV incluyen resultados fuera de la primera página', () 
 
 test('valida respuestas coherentes y rechaza clases que no son la probabilidad mayor', () => {
   assert.doesNotThrow(() => validateResult(result));
-  assert.throws(() => validateResult({ ...result, confidence: .2, conclusive: false, label: 'NO CONCLUYENTE', probabilities: { APTO: .2, 'NO APTO': .8 } }), /inconsistentes/);
-  assert.throws(() => validateResult({ ...result, probabilities: { APTO: .86, 'NO APTO': .5 } }), /inconsistentes/);
+  assert.throws(() => validateResult({ ...result, confidence: .2, conclusive: false, label: 'APTO', probabilities: { APTO: .2, 'NO APTO': .4, 'SIN PLÁTANO': .4 } }), /inconsistentes/);
+  assert.throws(() => validateResult({ ...result, probabilities: { APTO: .86, 'NO APTO': .10, 'SIN PLÁTANO': .20 } }), /inconsistentes/);
   assert.throws(() => validateResult({ ...result, inference_time_ms: -1 }), /inválido/);
 });
 
 test('combina búsqueda, clasificación y fecha local', () => {
   const other = { ...item, name: 'Lote B.jpg', label: 'NO APTO' };
   assert.deepEqual(filterHistory([item, other], { query: ' LOTE ', label: 'NO APTO', date: dayKey(item.timestamp) }), [other]);
-  assert.equal(filterHistory([item, other], { label: 'NO CONCLUYENTE' }).length, 0);
+  assert.equal(filterHistory([item, other], { label: 'SIN PLÁTANO' }).length, 0);
 });
 
 test('CSV usa UTF-8, escapa comillas y neutraliza prefijos de fórmulas', () => {
@@ -90,7 +90,15 @@ test('dirección de API rechaza credenciales y contenido mixto', () => {
 test('textos de resultado: títulos esperados y aviso sin afirmaciones de certificación', () => {
   assert.equal(resultCopy('APTO').title, 'Apto para continuar');
   assert.equal(resultCopy('NO APTO').title, 'Revisión requerida');
-  assert.equal(resultCopy('NO CONCLUYENTE').title, 'Resultado no concluyente');
-  for (const label of ['APTO', 'NO APTO', 'NO CONCLUYENTE']) assert.equal(resultCopy(label).recommendations.length, 2);
+  assert.equal(resultCopy('SIN PLÁTANO').title, 'No se detectó un plátano');
+  for (const label of ['APTO', 'NO APTO', 'SIN PLÁTANO']) assert.equal(resultCopy(label).recommendations.length, 2);
   assert.doesNotMatch(JSON.stringify(resultCopy('APTO')), /100% seguro|aprobado definitivamente/i);
+});
+
+test('SIN PLÁTANO es una salida válida del modelo pero no una clase del historial', () => {
+  const empty = { ...result, label: 'SIN PLÁTANO', predicted_class: 'SIN PLÁTANO', confidence: .8,
+    probabilities: { APTO: .1, 'NO APTO': .1, 'SIN PLÁTANO': .8 } };
+  assert.doesNotThrow(() => validateResult(empty));
+  storage.set(HISTORY_KEY, JSON.stringify([{ ...item, label: 'SIN PLÁTANO' }, item]));
+  assert.deepEqual(loadHistory(), [item]);
 });

@@ -1,6 +1,8 @@
 from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict
 
+BananaLabel = Literal['APTO', 'NO APTO', 'SIN PLÁTANO']
+
 class Base64Input(BaseModel):
     model_config = ConfigDict(extra='forbid')
     image: str = Field(min_length=1)
@@ -11,11 +13,11 @@ class Recommendation(BaseModel):
     action: str
     storage: str
 class PredictResponse(BaseModel):
-    label: Literal['APTO', 'NO APTO', 'NO CONCLUYENTE']
-    predicted_class: Literal['APTO', 'NO APTO']
+    label: BananaLabel
+    predicted_class: BananaLabel
     confidence: float = Field(ge=0, le=1)
     probabilities: dict[str, float]
-    conclusive: bool
+    conclusive: bool = True
     threshold: float
     recommendation: Recommendation
     inference_time_ms: float = Field(ge=0)

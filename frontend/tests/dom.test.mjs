@@ -88,3 +88,10 @@ test('las indicaciones de carga se ocultan en cámara y se muestran en análisis
   }
   assert.match(html, /id="dropHint"[^>]*hidden/);
 });
+
+test('el modelo visible usa exactamente APTO, NO APTO y SIN PLÁTANO', () => {
+  assert.doesNotMatch(html, /NO CONCLUYENTE/);
+  assert.doesNotMatch(app, /NO CONCLUYENTE/);
+  assert.match(html, /SIN PLÁTANO/);
+  assert.ok(!known.has('thresholdMarker'));
+});

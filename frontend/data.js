@@ -5,10 +5,11 @@ export const HISTORY_KEY = 'bananaStudioHistoryV2';
 export const API_KEY = 'bananaStudioApi';
 // The stored name is preserved so a previous mute preference survives the switch to voice alerts.
 export const VOICE_KEY = 'bananaVisionAlarmEnabled';
-export const LABELS = ['APTO', 'NO APTO', 'NO CONCLUYENTE'];
+export const LABELS = ['APTO', 'NO APTO', 'SIN PLÁTANO'];
+export const HISTORY_LABELS = ['APTO', 'NO APTO'];
 export const exportLabel = label => label;
 
-// Presentación al usuario; las etiquetas internas siguen siendo APTO / NO APTO / NO CONCLUYENTE.
+// Presentación al usuario; el modelo devuelve exactamente APTO / NO APTO / SIN PLÁTANO.
 const RESULT_COPY = {
   'APTO': {
     title: 'Apto para continuar',
@@ -26,16 +27,16 @@ const RESULT_COPY = {
       { title: 'Evaluar nuevamente', text: 'Verifica daños visibles y estado físico. Si es necesario, captura una nueva fotografía.' },
     ],
   },
-  'NO CONCLUYENTE': {
-    title: 'Resultado no concluyente',
-    description: 'La confianza del modelo no alcanza el umbral mínimo requerido. Capture una nueva fotografía en mejores condiciones y repita el análisis.',
+  'SIN PLÁTANO': {
+    title: 'No se detectó un plátano',
+    description: 'La imagen no contiene un plátano reconocible. Coloca una muestra frente a la cámara o selecciona una fotografía que contenga un plátano.',
     recommendations: [
-      { title: 'Repetir análisis', text: 'Vuelve a ejecutar el análisis con la misma muestra o con una nueva captura.' },
-      { title: 'Mejorar captura', text: 'Centra un solo plátano en el área marcada, con luz uniforme y fondo neutro.' },
+      { title: 'Colocar una muestra', text: 'Centra un plátano dentro del área de análisis antes de continuar.' },
+      { title: 'Revisar la captura', text: 'Utiliza luz uniforme y procura que el plátano sea claramente visible.' },
     ],
   },
 };
-export const resultCopy = label => RESULT_COPY[label] || RESULT_COPY['NO CONCLUYENTE'];
+export const resultCopy = label => RESULT_COPY[label] || RESULT_COPY['SIN PLÁTANO'];
 
 export function storageGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -45,7 +46,7 @@ export function loadHistory() {
   try {
     const stored = JSON.parse(storageGet(HISTORY_KEY) || '[]');
     if (!Array.isArray(stored)) return [];
-    return stored.filter(item => item && LABELS.includes(item.label)
+    return stored.filter(item => item && HISTORY_LABELS.includes(item.label)
       && typeof item.name === 'string' && item.name.length <= 200
       && Number.isFinite(item.confidence) && item.confidence >= 0 && item.confidence <= 1
       && Number.isFinite(item.inference_time_ms) && item.inference_time_ms >= 0
@@ -86,7 +87,7 @@ export function validApiUrl(value) {
 }
 
 export function validateResult(data) {
-  const probabilityKeys = ['APTO', 'NO APTO'];
+  const probabilityKeys = LABELS;
   if (!data || !LABELS.includes(data.label)
     || !Number.isFinite(data.confidence) || data.confidence < 0 || data.confidence > 1
     || !Number.isFinite(data.inference_time_ms) || data.inference_time_ms < 0
@@ -97,10 +98,11 @@ export function validateResult(data) {
     throw new Error('El servidor devolvió un resultado incompleto o inválido.');
   }
   const maximum = Math.max(...probabilityKeys.map(key => data.probabilities[key]));
+  const total = probabilityKeys.reduce((sum, key) => sum + data.probabilities[key], 0);
   if (!probabilityKeys.includes(data.predicted_class)
-    || data.conclusive !== (data.confidence >= data.threshold)
-    || data.label !== (data.conclusive ? data.predicted_class : 'NO CONCLUYENTE')
-    || Math.abs(data.probabilities.APTO + data.probabilities['NO APTO'] - 1) > .001
+    || data.conclusive !== true
+    || data.label !== data.predicted_class
+    || Math.abs(total - 1) > .001
     || Math.abs(data.confidence - data.probabilities[data.predicted_class]) > .001
     || Math.abs(maximum - data.probabilities[data.predicted_class]) > .001) {
     throw new Error('El servidor devolvió probabilidades inconsistentes.');
@@ -109,7 +111,7 @@ export function validateResult(data) {
 
 export const percentage = value => `${(value * 100).toFixed(1)}%`;
 export const elapsed = value => value < 1000 ? `${Math.round(value)} ms` : `${(value / 1000).toFixed(2)} s`;
-export const badgeClass = label => label === 'NO APTO' ? 'bad' : label === 'NO CONCLUYENTE' ? 'uncertain' : '';
+export const badgeClass = label => label === 'NO APTO' ? 'bad' : label === 'SIN PLÁTANO' ? 'uncertain' : '';
 export const formatDate = timestamp => new Date(timestamp).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
 export function dayKey(value) {

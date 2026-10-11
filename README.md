@@ -1,12 +1,12 @@
 # BananaVision AI
 
-Aplicación web de **evaluación visual asistida por IA** para plátanos: clasifica una fotografía como `APTO` o `NO APTO` y, cuando la confianza es baja, devuelve `NO CONCLUYENTE`. Backend en FastAPI con un modelo Keras y frontend en JavaScript vanilla.
+Aplicación web de **evaluación visual asistida por IA** para plátanos: clasifica cada imagen como `APTO`, `NO APTO` o `SIN PLÁTANO`. Backend en FastAPI con un modelo Keras y frontend en JavaScript vanilla.
 
 ## Características
 
-- Análisis visual `APTO`, `NO APTO` o `NO CONCLUYENTE`, con probabilidades y tiempo de inferencia.
+- Análisis visual con tres resultados del modelo: `APTO`, `NO APTO` y `SIN PLÁTANO`, con confianza y tiempo de inferencia.
 - **Sin registro ni inicio de sesión.** Cada navegador obtiene automáticamente un identificador privado mediante una cookie HttpOnly.
-- **Todos los resultados NO APTO del análisis continuo se guardan automáticamente en el historial** con fotografía, confianza y fecha. Los fotogramas APTO y NO CONCLUYENTE del modo continuo no se registran.
+- **Todos los resultados NO APTO del análisis continuo se guardan automáticamente en el historial** con fotografía, confianza y fecha. `APTO` continuo no se registra y `SIN PLÁTANO` solo informa que falta una muestra.
 - La carga de imágenes y los análisis manuales siguen guardando sus resultados, independientemente de la clasificación.
 - Galería de las últimas 200 capturas NO APTO, filtros del historial y exportación CSV.
 - En Railway, PostgreSQL almacena los metadatos y un bucket privado almacena las fotografías. Sin `DATABASE_URL`, usa localStorage/IndexedDB.
@@ -59,7 +59,7 @@ BV_ANONYMOUS_ONLY=true
 BV_SIGNUP_ENABLED=false
 ```
 
-**Uso sin cuentas:** abre la web, permite la cámara o sube una imagen y analiza. El servidor asigna automáticamente una sesión anónima con cookie privada por navegador. No hay formulario de registro ni inicio de sesión. Cada `NO APTO` detectado en cámara continua entra al historial automáticamente y puede consultarse con su fotografía. Una muestra manual también se guarda, incluso si es APTO o NO CONCLUYENTE.
+**Uso sin cuentas:** abre la web, permite la cámara o sube una imagen y analiza. El servidor asigna automáticamente una sesión anónima con cookie privada por navegador. No hay formulario de registro ni inicio de sesión. Cada `NO APTO` detectado en cámara continua entra al historial automáticamente y puede consultarse con su fotografía. Una muestra manual se guarda cuando el resultado corresponde a un plátano (`APTO` o `NO APTO`); `SIN PLÁTANO` no crea un registro de producto.
 
 **Privacidad:** cada navegador tiene su propio historial; los visitantes de la URL pública no pueden acceder a fotografías ajenas. No equivale a sincronización entre dispositivos: sin cuenta, no existe forma de recuperar ese historial desde otro dispositivo y si se eliminan las cookies puede perderse la clave de acceso aunque los registros aún estén en PostgreSQL. La sesión anónima dura 365 días y se renueva al visitar la aplicación.
 

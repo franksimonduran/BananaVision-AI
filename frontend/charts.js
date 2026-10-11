@@ -1,4 +1,4 @@
-import { LABELS, exportLabel, dayKey, percentage } from './data.js?v=20261006-6';
+import { HISTORY_LABELS, exportLabel, dayKey, percentage } from './data.js?v=20261010-1';
 
 const NS = 'http://www.w3.org/2000/svg';
 const colors = ['#337c59', '#b45f4c', '#c8a255'];
@@ -87,8 +87,8 @@ export function renderDistribution(host, legend, history) {
   host.replaceChildren();
   legend.replaceChildren();
   const total = history.length;
-  const counts = LABELS.map(label => history.filter(item => item.label === label).length);
-  const description = total ? counts.map((count, index) => `${exportLabel(LABELS[index])}: ${count}`).join('; ') : 'Sin resultados guardados';
+  const counts = HISTORY_LABELS.map(label => history.filter(item => item.label === label).length);
+  const description = total ? counts.map((count, index) => `${exportLabel(HISTORY_LABELS[index])}: ${count}`).join('; ') : 'Sin resultados guardados';
   const svg = svgNode('svg', { viewBox: '0 0 200 200', class: 'donut-svg', role: 'img', 'aria-label': `Clasificación visual. ${description}.` });
   svg.append(svgNode('circle', { cx: 100, cy: 100, r: 76, fill: 'none', stroke: '#edf1e7', 'stroke-width': 17 }));
   const circumference = 2 * Math.PI * 76;
@@ -97,13 +97,13 @@ export function renderDistribution(host, legend, history) {
     if (count) {
       const length = circumference * count / total;
       const segment = svgNode('circle', { cx: 100, cy: 100, r: 76, fill: 'none', stroke: colors[index], 'stroke-width': 17, 'stroke-dasharray': `${Math.max(0, length - (count === total ? 0 : 3))} ${circumference}`, 'stroke-dashoffset': -offset, transform: 'rotate(-90 100 100)', class: 'donut-segment' });
-      segment.append(svgNode('title', {}, `${exportLabel(LABELS[index])}: ${count} (${percentage(count / total)})`));
+      segment.append(svgNode('title', {}, `${exportLabel(HISTORY_LABELS[index])}: ${count} (${percentage(count / total)})`));
       svg.append(segment);
       offset += length;
     }
     const row = document.createElement('div'); row.className = 'legend-row';
-    const dot = document.createElement('i'); dot.className = `legend-dot ${['apto', 'no-apto', 'uncertain'][index]}`;
-    const label = document.createElement('span'); label.textContent = exportLabel(LABELS[index]);
+    const dot = document.createElement('i'); dot.className = `legend-dot ${['apto', 'no-apto'][index]}`;
+    const label = document.createElement('span'); label.textContent = exportLabel(HISTORY_LABELS[index]);
     const value = document.createElement('strong'); value.textContent = count;
     const share = document.createElement('small'); share.textContent = total ? `${Math.round(count / total * 100)}%` : '—';
     row.append(dot, label, value, share); legend.append(row);
@@ -133,7 +133,7 @@ export function renderConfidence(host, history) {
     svg.append(svgNode('path', { d: path, fill: 'none', stroke: '#43774d', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
   }
   points.forEach(({ reading, x, y }, index) => {
-    const point = svgNode('circle', { cx: x, cy: y, r: 4, fill: colors[LABELS.indexOf(reading.label)], stroke: '#fff', 'stroke-width': 2 });
+    const point = svgNode('circle', { cx: x, cy: y, r: 4, fill: colors[HISTORY_LABELS.indexOf(reading.label)], stroke: '#fff', 'stroke-width': 2 });
     interactivePoint(host, point, `${reading.name}: ${percentage(reading.confidence)} · ${exportLabel(reading.label)}`);
     svg.append(point);
     if (index % 2 === 0 || index === points.length - 1) svg.append(svgNode('text', { x, y: 184, 'text-anchor': 'middle' }, String(index + 1).padStart(2, '0')));

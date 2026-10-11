@@ -26,7 +26,13 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true, args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
 const passed = [], errors = [], resourceErrors = [];
 const record = message => { passed.push(message); console.log(`OK ${message}`); };
-const reading = (label = 'APTO', confidence = .86, time = 120) => ({ label, confidence, inference_time_ms: time, threshold: .7, conclusive: label !== 'NO CONCLUYENTE', predicted_class: label === 'NO APTO' ? 'NO APTO' : 'APTO', probabilities: { APTO: label === 'NO APTO' ? 1 - confidence : confidence, 'NO APTO': label === 'NO APTO' ? confidence : 1 - confidence }, recommendation: { message: 'Evaluación visual preliminar.', action: 'Revisa manualmente la muestra antes de decidir.', storage: 'Mantén la muestra identificada mientras revisas.' } });
+const reading = (label = 'APTO', confidence = .86, time = 120) => {
+  const labels = ['APTO', 'NO APTO', 'SIN PLÁTANO'];
+  const remainder = (1 - confidence) / 2;
+  const probabilities = Object.fromEntries(labels.map(key => [key, key === label ? confidence : remainder]));
+  return { label, confidence, inference_time_ms: time, threshold: .7, conclusive: true, predicted_class: label,
+    probabilities, recommendation: { message: 'Evaluación visual preliminar.', action: 'Revisa manualmente la muestra antes de decidir.', storage: 'Mantén la muestra identificada mientras revisas.' } };
+};
 
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, permissions: ['camera'] });
@@ -56,16 +62,16 @@ try {
   });
   let healthState = 'ready', mode = 'success', delay = 0, active = 0, maximumActive = 0;
   await page.route('**/health', route => healthState === 'network' ? route.abort() : route.fulfill({ status: healthState === 'unavailable' ? 503 : 200, json: { model_loaded: healthState !== 'unavailable', limits: { image_mb: 5, batch_files: 10, batch_mb: 20 } } }));
-  await page.route('**/model/info', route => route.fulfill({ json: { model_name: 'Modelo de prueba', parameters: 538508, input_shape: [224, 224, 3] } }));
+  await page.route('**/model/info', route => route.fulfill({ json: { model_name: 'Modelo de prueba', parameters: 538608, input_shape: [224, 224, 3] } }));
   await page.route('**/predict', async route => {
     active++; maximumActive = Math.max(maximumActive, active);
     try {
       if (delay) await new Promise(resolve => setTimeout(resolve, delay));
       if (mode === 'error') await route.fulfill({ status: 500, json: { detail: 'Fallo de prueba controlado' } });
-      else await route.fulfill({ json: mode === 'reject' ? reading('NO APTO', .93) : mode === 'uncertain' ? reading('NO CONCLUYENTE', .6) : reading() });
+      else await route.fulfill({ json: mode === 'reject' ? reading('NO APTO', .93) : mode === 'empty' ? reading('SIN PLÁTANO', .6) : reading() });
     } finally { active--; }
   });
-  await page.route('**/predict/batch', route => route.fulfill({ json: [reading('NO APTO', .93, 152), reading('NO CONCLUYENTE', .6, 155)] }));
+  await page.route('**/predict/batch', route => route.fulfill({ json: [reading('NO APTO', .93, 152), reading('SIN PLÁTANO', .6, 155)] }));
   await page.goto(`${origin}/#dashboard`);
   await page.waitForFunction(() => document.getElementById('sidebarStatusText').textContent === 'Modelo conectado');
   assert.equal(await page.locator('#dashTotal').textContent(), '0');
@@ -133,8 +139,8 @@ try {
   assert.equal(batchAlerts[0].text, 'Atención, producto no apto para exportación.');
   await page.locator('#readingSelect').selectOption('1');
   assert.equal(await page.locator('#resultSource').textContent(), 'lote-c.png');
-  assert.equal(await page.locator('#resultLabel').textContent(), 'NO CONCLUYENTE');
-  assert.equal(await page.locator('#dashTotal').textContent(), '3');
+  assert.equal(await page.locator('#resultLabel').textContent(), 'SIN PLÁTANO');
+  assert.equal(await page.locator('#dashTotal').textContent(), '2');
   const mean = await page.locator('#dashTime').textContent();
   await page.locator('#readingSelect').selectOption('0');
   assert.equal(await page.locator('#dashTime').textContent(), mean);
@@ -292,9 +298,9 @@ try {
   await page.locator('[data-view="historial"]').click();
   await page.locator('[data-view="capturar"]').click();
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), rejectionAlerts);
-  mode = 'uncertain';
+  mode = 'empty';
   await page.locator('#analyzeButton').click();
-  await page.waitForFunction(() => document.getElementById('stage').getAttribute('aria-busy') === 'false' && document.getElementById('resultLabel').textContent === 'NO CONCLUYENTE');
+  await page.waitForFunction(() => document.getElementById('stage').getAttribute('aria-busy') === 'false' && document.getElementById('resultLabel').textContent === 'SIN PLÁTANO');
   assert.equal(await page.locator('#resultLabel').textContent(), 'NO CONCLUYENTE');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), rejectionAlerts);
   await page.locator('#voiceEnabled').uncheck();
