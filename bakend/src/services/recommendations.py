@@ -11,12 +11,12 @@ RECOMMENDATIONS = {
         'timing': 'Priorizar su salida si está maduro.',
         'action': 'Canalizar según su estado; descartar si no es consumible.',
         'storage': 'Separar e identificar fuera del lote de exportación.'},
-    'NO CONCLUYENTE': {
-        'message': 'La confianza es insuficiente para emitir una clasificación.',
-        'destination': 'Pendiente de clasificación.',
-        'timing': 'Repetir el análisis de inmediato.',
-        'action': 'Mejorar la captura; si persiste, revisar manualmente.',
-        'storage': 'Mantener separado e identificado.'}}
+    'SIN PLÁTANO': {
+        'message': 'No se detectó un plátano en la imagen.',
+        'destination': 'Sin clasificación de exportación.',
+        'timing': 'Coloca una muestra y repite el análisis.',
+        'action': 'Centra un plátano frente a la cámara o selecciona una imagen que contenga uno.',
+        'storage': 'No se registra como producto APTO ni NO APTO.'}}
 
 def get_recommendation(label):
     return RECOMMENDATIONS[label].copy()
