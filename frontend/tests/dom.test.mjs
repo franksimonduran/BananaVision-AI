@@ -95,3 +95,12 @@ test('el modelo visible usa exactamente APTO, NO APTO y SIN PLÁTANO', () => {
   assert.match(html, /SIN PLÁTANO/);
   assert.ok(!known.has('thresholdMarker'));
 });
+
+
+test('SIN PLÁTANO oculta el porcentaje de confianza', () => {
+  assert.ok(known.has('confidenceHeading'));
+  assert.ok(known.has('confidenceProgress'));
+  assert.match(app, /const hideConfidence = data\.label === 'SIN PLÁTANO'/);
+  assert.match(app, /\$\('confidenceHeading'\)\.hidden = hideConfidence/);
+  assert.match(app, /\$\('confidenceProgress'\)\.hidden = hideConfidence/);
+});
