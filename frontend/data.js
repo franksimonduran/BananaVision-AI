@@ -6,6 +6,7 @@ export const API_KEY = 'bananaStudioApi';
 // The stored name is preserved so a previous mute preference survives the switch to voice alerts.
 export const VOICE_KEY = 'bananaVisionAlarmEnabled';
 export const LABELS = ['APTO', 'NO APTO', 'SIN PLÁTANO'];
+export const HISTORY_LABELS = ['APTO', 'NO APTO'];
 export const exportLabel = label => label;
 
 // Presentación al usuario; el modelo devuelve exactamente APTO / NO APTO / SIN PLÁTANO.
@@ -45,7 +46,7 @@ export function loadHistory() {
   try {
     const stored = JSON.parse(storageGet(HISTORY_KEY) || '[]');
     if (!Array.isArray(stored)) return [];
-    return stored.filter(item => item && LABELS.includes(item.label)
+    return stored.filter(item => item && HISTORY_LABELS.includes(item.label)
       && typeof item.name === 'string' && item.name.length <= 200
       && Number.isFinite(item.confidence) && item.confidence >= 0 && item.confidence <= 1
       && Number.isFinite(item.inference_time_ms) && item.inference_time_ms >= 0
