@@ -28,7 +28,7 @@ function alertExportResults(results, continuous) {
 const viewNames = { dashboard: 'Panel', capturar: 'Análisis', historial: 'Historial' };
 const state = {
   history: loadHistory(), historyPage: 1, sourceMode: 'camera', files: [], readings: [], stream: null,
-  previewUrl: null, thumbnailUrl: null, job: null, cameraPending: false,
+  previewUrl: null, job: null, cameraPending: false,
   cameraTicket: 0, realtimeRunning: false, realtimeWanted: true, apiReady: false, sessionTotal: 0,
   limits: { image_mb: CONFIG.MAX_IMAGE_SIZE_MB, batch_files: CONFIG.MAX_BATCH_FILES, batch_mb: CONFIG.MAX_BATCH_SIZE_MB },
   view: 'capturar', cloudEnabled: false, cloudInitializing: true, account: null
@@ -408,8 +408,6 @@ function resetPreview() {
 function clearResults() {
   alertVoice.stop();
   state.readings = [];
-  if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
-  state.thumbnailUrl = null; $('resultThumbnail').removeAttribute('src');
   $('readingPicker').hidden = true; $('readingSelect').replaceChildren();
   $('resultContent').hidden = true; $('resultEmpty').hidden = false;
 }
@@ -462,9 +460,6 @@ function showReading(index) {
     $('confidenceProgress').removeAttribute('aria-valuetext');
     $('confidenceBar').style.width = '0%';
   }
-  $('resultSource').textContent = reading.name; $('resultSource').title = reading.name;
-  if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
-  state.thumbnailUrl = URL.createObjectURL(reading.file); $('resultThumbnail').src = state.thumbnailUrl;
   if (!state.stream && !reading.fromCamera) {
     showPreview(reading.file, state.readings.length > 1 ? `MUESTRA ${index + 1} DE ${state.readings.length}` : 'MUESTRA ANALIZADA');
     $('selectionText').textContent = reading.name;
