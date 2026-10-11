@@ -4,7 +4,7 @@ import ExportAlert from './voice.js?v=20261006-8';
 import RejectionStore from './rejections.js';
 import HistoryImages from './history-images.js';
 import CloudClient from './cloud.js?v=20261007-1';
-import { API_KEY, HISTORY_KEY, VOICE_KEY, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261010-1';
+import { API_KEY, HISTORY_KEY, VOICE_KEY, HISTORY_LABELS, resultCopy, exportLabel, loadHistory, saveHistory, storageGet, validApiUrl, validateResult, percentage, elapsed, badgeClass, formatDate, filterHistory, paginateHistory, csvContent } from './data.js?v=20261010-1';
 import { renderActivity, renderDistribution, renderConfidence } from './charts.js?v=20261006-6';
 
 const $ = id => document.getElementById(id);
@@ -77,7 +77,7 @@ function syncStorageUI() {
 
 async function refreshCloudHistory() {
   if (!state.account) return;
-  state.history = await cloud.history();
+  state.history = (await cloud.history()).filter(item => HISTORY_LABELS.includes(item.label));
   refreshData();
 }
 
@@ -93,7 +93,7 @@ async function refreshCloudSession({ quiet = false } = {}) {
       await cloud.anonymous();
       session = await cloud.me();
     }
-    const history = session.user ? await cloud.history() : loadHistory();
+    const history = session.user ? (await cloud.history()).filter(item => HISTORY_LABELS.includes(item.label)) : loadHistory();
     if (ticket !== cloudTicket) return;
     const oldId = state.account?.id;
     state.cloudEnabled = session.enabled === true;
@@ -580,7 +580,7 @@ async function analyze(continuous = false) {
     results.forEach(validateResult);
     state.readings = results.map((data, index) => ({ id: data.record_id || data.capture_id || crypto.randomUUID(), data, file: inputs[index], name: fromCamera ? 'Captura de cámara' : inputs[index].name, timestamp, fromCamera, continuous }));
     state.readings.forEach(reading => {
-      state.sessionTotal++; // lecturas de la sesión (incluye las automáticas)
+      if (reading.data.label !== 'SIN PLÁTANO') state.sessionTotal++; // solo muestras de plátano
       // A NO APTO continuous frame is a recorded event; other frames are transient.
       if (reading.data.label !== 'SIN PLÁTANO' && (!continuous || reading.data.label === 'NO APTO') && !state.account) {
         state.history.unshift({ id: reading.id, name: reading.name.slice(0, 200),
