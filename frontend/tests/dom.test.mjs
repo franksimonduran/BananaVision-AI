@@ -77,7 +77,7 @@ test('sin métricas técnicas ni leyendas extensas en el resultado', () => {
     assert.ok(!known.has(id), 'Elemento eliminado que sigue visible: ' + id);
   }
   assert.ok(known.has('voiceEnabled'), 'El interruptor de voz debe permanecer');
-  assert.match(app, /Atención, producto no apto para exportación\./);
+  assert.match(app, /Atención, plátano no apto para exportación\./);
   assert.doesNotMatch(app, /Aviso para NO APTO · máximo cada/);
 });
 
@@ -94,4 +94,20 @@ test('el modelo visible usa exactamente APTO, NO APTO y SIN PLÁTANO', () => {
   assert.doesNotMatch(app, /NO CONCLUYENTE/);
   assert.match(html, /SIN PLÁTANO/);
   assert.ok(!known.has('thresholdMarker'));
+});
+
+
+test('SIN PLÁTANO oculta el porcentaje de confianza', () => {
+  assert.ok(known.has('confidenceHeading'));
+  assert.ok(known.has('confidenceProgress'));
+  assert.match(app, /const hideConfidence = data\.label === 'SIN PLÁTANO'/);
+  assert.match(app, /\$\('confidenceHeading'\)\.hidden = hideConfidence/);
+  assert.match(app, /\$\('confidenceProgress'\)\.hidden = hideConfidence/);
+});
+
+
+test('el resultado ya no muestra la fotografía ni textos de la lectura analizada', () => {
+  for (const id of ['resultThumbnail', 'resultSource']) assert.ok(!known.has(id));
+  assert.doesNotMatch(html, /Imagen que produjo esta lectura|MUESTRA ANALIZADA|Fotografía de esta lectura/);
+  assert.doesNotMatch(app, /resultThumbnail|resultSource|thumbnailUrl/);
 });

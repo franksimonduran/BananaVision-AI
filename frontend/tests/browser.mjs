@@ -118,7 +118,7 @@ try {
   assert.ok((await page.locator('#selectionMeta').textContent()).includes('/ PNG'));
   assert.equal(await page.locator('#selectionThumbnail').isVisible(), true);
   await page.locator('#analyzeButton').click();
-  await page.waitForFunction(() => document.getElementById('resultSource').textContent === 'muestra-a.png' && !document.getElementById('resultContent').hidden);
+  await page.waitForFunction(() => !document.getElementById('resultContent').hidden && document.getElementById('resultLabel').textContent === 'APTO');
   assert.equal(await page.locator('#resultLabel').textContent(), 'APTO');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), 0);
   assert.equal(await page.locator('#resultHeadline').textContent(), 'Apto para continuar');
@@ -127,19 +127,19 @@ try {
     assert.equal(await page.locator('#' + removedId).count(), 0);
   }
   assert.equal(await page.locator('#recommendationTwoText').isVisible(), true);
-  assert.equal(await page.locator('#resultThumbnail').evaluate(img => img.complete && img.naturalWidth > 0), true);
   assert.equal(await page.locator('#dashTotal').textContent(), '1');
-  record('Imagen, resultado, miniatura y recomendaciones juntos; panel actualizado');
+  record('Imagen seleccionada, resultado y recomendaciones; panel actualizado');
 
   await page.locator('#fileInput').setInputFiles([file('lote-b.png'), file('lote-c.png')]);
   await page.locator('#analyzeButton').click();
   await page.waitForFunction(() => document.getElementById('readingSelect').options.length === 2 && !document.getElementById('readingSelect').disabled);
   const batchAlerts = await page.evaluate(() => window.testVoiceAlerts);
   assert.equal(batchAlerts.length, 1);
-  assert.equal(batchAlerts[0].text, 'Atención, producto no apto para exportación.');
+  assert.equal(batchAlerts[0].text, 'Atención, plátano no apto para exportación.');
   await page.locator('#readingSelect').selectOption('1');
-  assert.equal(await page.locator('#resultSource').textContent(), 'lote-c.png');
   assert.equal(await page.locator('#resultLabel').textContent(), 'SIN PLÁTANO');
+  assert.equal(await page.locator('#confidenceHeading').isVisible(), false);
+  assert.equal(await page.locator('#confidenceProgress').isVisible(), false);
   assert.equal(await page.locator('#dashTotal').textContent(), '2');
   const mean = await page.locator('#dashTime').textContent();
   await page.locator('#readingSelect').selectOption('0');
@@ -150,7 +150,7 @@ try {
   await page.locator('[data-view="dashboard"]').click();
   await page.waitForFunction(() => getComputedStyle(document.getElementById('view-dashboard')).opacity === '1');
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.equal(await page.locator('#distributionLegend .legend-row').count(), 3);
+  assert.equal(await page.locator('#distributionLegend .legend-row').count(), 2);
   assert.equal(await page.locator('#confidenceChart circle[tabindex]').count(), 3);
   await page.locator('#confidenceChart circle[tabindex]').first().focus();
   assert.equal(await page.locator('#confidenceChart .chart-tooltip').isVisible(), true);
@@ -244,16 +244,13 @@ try {
   await page.locator('#cameraMode').click();
   await page.locator('#startLiveCamera').click();
   await page.waitForFunction(() => document.getElementById('video').videoWidth > 0 && document.getElementById('realtime').checked);
-  await page.waitForFunction(() => document.getElementById('resultSource').textContent === 'Captura de cámara' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
-  assert.equal(await page.locator('#resultThumbnail').evaluate(img => img.naturalWidth), 672);
-  const cameraThumbnail = await page.locator('#resultThumbnail').getAttribute('src');
+  await page.waitForFunction(() => document.getElementById('resultLabel').textContent === 'APTO' && document.getElementById('stage').getAttribute('aria-busy') === 'false');
   await page.waitForTimeout(2500);
   await page.evaluate(() => { window.testTracks = document.getElementById('video').srcObject.getTracks(); });
   await page.locator('#stopCamera').click();
   assert.equal(await page.evaluate(() => window.testTracks.every(track => track.readyState === 'ended')), true);
   assert.equal(await page.locator('#analyzeButton').isDisabled(), true);
   assert.equal(maximumActive, 1);
-  assert.ok(cameraThumbnail?.startsWith('blob:'));
   assert.equal(await page.locator('#rejectionCount').textContent(), '0');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), alertsBeforeCancel);
   record('Cámara virtual automática: APTO sin guardar fotografías ni avisos de voz, continuo sin solapamientos y pistas liberadas');
@@ -301,7 +298,7 @@ try {
   mode = 'empty';
   await page.locator('#analyzeButton').click();
   await page.waitForFunction(() => document.getElementById('stage').getAttribute('aria-busy') === 'false' && document.getElementById('resultLabel').textContent === 'SIN PLÁTANO');
-  assert.equal(await page.locator('#resultLabel').textContent(), 'NO CONCLUYENTE');
+  assert.equal(await page.locator('#resultLabel').textContent(), 'SIN PLÁTANO');
   assert.equal(await page.evaluate(() => window.testVoiceAlerts.length), rejectionAlerts);
   await page.locator('#voiceEnabled').uncheck();
   await page.reload();

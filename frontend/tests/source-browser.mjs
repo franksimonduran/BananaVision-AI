@@ -90,7 +90,7 @@ try {
   assert.equal(await page.locator('#selectImagesText').textContent(), 'Cambiar imágenes');
   delay = 0;
   await page.locator('#analyzeButton').click();
-  await page.waitForFunction(() => document.getElementById('resultSource').textContent === 'individual.png' && !document.getElementById('analyzeButton').disabled);
+  await page.waitForFunction(() => document.getElementById('resultLabel').textContent === 'APTO' && !document.getElementById('analyzeButton').disabled);
   await page.locator('[data-view="historial"]').click();
   await page.getByRole('button', { name: 'Ver imagen y datos de individual.png', exact: true }).click();
   await page.waitForFunction(() => document.getElementById('historyDetailImage').naturalWidth === 600);
@@ -104,7 +104,6 @@ try {
   await page.locator('#analyzeButton').click();
   await page.waitForFunction(() => document.getElementById('readingSelect').options.length === 2 && !document.getElementById('analyzeButton').disabled);
   await page.locator('#readingSelect').selectOption('1');
-  assert.equal(await page.locator('#resultSource').textContent(), 'lote-b.png');
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(await page.locator('.source-mode-selector').evaluate(element => element.scrollWidth <= element.clientWidth));
   await page.locator('#cameraMode').click();

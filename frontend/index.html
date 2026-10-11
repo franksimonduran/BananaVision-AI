@@ -113,10 +113,9 @@
               <div id="resultEmpty" class="result-empty"><div class="empty-scan"><svg aria-hidden="true"><use href="#i-scan"/></svg><span></span></div><h3>Esperando una muestra</h3><p>El resultado aparecerá aquí después del análisis.<br>Consulta la clasificación, la confianza y el siguiente paso.</p><div class="workflow"><span>Captura</span><i>→</i><span>Analiza</span><i>→</i><span>Revisa</span></div></div>
               <div id="resultContent" hidden>
                 <div class="result-top">
-                  <figure class="result-sample"><div class="result-image"><img id="resultThumbnail" alt="Imagen que produjo esta lectura"><span class="image-caption"><svg aria-hidden="true"><use href="#i-scan"/></svg>MUESTRA ANALIZADA</span></div><figcaption><strong id="resultSource"></strong><span>Fotografía de esta lectura</span></figcaption></figure>
                   <div id="classificationPanel" class="classification-panel">
                     <span class="classification-caption">Clasificación del estado</span><h3 id="resultLabel" class="result-verdict"></h3><strong id="resultHeadline" class="result-headline"></strong>
-                    <div class="confidence-heading"><span>Confianza del análisis</span><strong id="confidenceValue"></strong></div>
+                    <div id="confidenceHeading" class="confidence-heading"><span>Confianza del análisis</span><strong id="confidenceValue"></strong></div>
                     <div id="confidenceProgress" class="progress-track" role="progressbar" aria-label="Confianza del análisis" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="confidenceBar"></div></div>
                     <p id="resultMessage" class="result-description"></p>
                   </div>
@@ -175,6 +174,6 @@
   <dialog id="clearHistoryDialog" aria-labelledby="clearHistoryTitle"><span class="eyebrow">HISTORIAL LOCAL</span><h2 id="clearHistoryTitle">¿Borrar las lecturas?</h2><p id="clearHistoryDescription">Se eliminarán los resultados y fotografías del historial y se actualizará el panel. Las capturas no aptas de la galería se conservan. Puedes exportar los datos a CSV antes de continuar.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar historial</button><button class="button button-danger" value="clear">Borrar historial</button></form></dialog>
   <dialog id="clearRejectionsDialog" aria-labelledby="clearRejectionsTitle"><h2 id="clearRejectionsTitle">¿Borrar las capturas no aptas?</h2><p id="clearRejectionsDescription">Se eliminarán las fotografías guardadas en este navegador. El historial de lecturas se conserva. Pausa el análisis en vivo para evitar nuevas capturas mientras borras.</p><form method="dialog" class="dialog-actions"><button class="button button-outline" value="cancel" autofocus>Conservar capturas</button><button class="button button-danger" value="clear">Borrar capturas</button></form></dialog>
   <noscript><div class="noscript-message"><img src="assets/logo-icono.png" alt="" width="34" height="34"><span>BananaVision AI necesita JavaScript para analizar imágenes y mostrar tus resultados.</span></div></noscript>
-  <script type="module" src="app.js?v=20261010-2"></script>
+  <script type="module" src="app.js?v=20261010-3"></script>
 </body>
 </html>

@@ -23,12 +23,12 @@ function unlockVoice() {
 
 function alertExportResults(results, continuous) {
   const rejected = results.filter(result => result.label === 'NO APTO').length;
-  if (rejected) alertVoice.speak('Atención, producto no apto para exportación.', { continuous });
+  if (rejected) alertVoice.speak('Atención, plátano no apto para exportación.', { continuous });
 }
 const viewNames = { dashboard: 'Panel', capturar: 'Análisis', historial: 'Historial' };
 const state = {
   history: loadHistory(), historyPage: 1, sourceMode: 'camera', files: [], readings: [], stream: null,
-  previewUrl: null, thumbnailUrl: null, job: null, cameraPending: false,
+  previewUrl: null, job: null, cameraPending: false,
   cameraTicket: 0, realtimeRunning: false, realtimeWanted: true, apiReady: false, sessionTotal: 0,
   limits: { image_mb: CONFIG.MAX_IMAGE_SIZE_MB, batch_files: CONFIG.MAX_BATCH_FILES, batch_mb: CONFIG.MAX_BATCH_SIZE_MB },
   view: 'capturar', cloudEnabled: false, cloudInitializing: true, account: null
@@ -408,8 +408,6 @@ function resetPreview() {
 function clearResults() {
   alertVoice.stop();
   state.readings = [];
-  if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
-  state.thumbnailUrl = null; $('resultThumbnail').removeAttribute('src');
   $('readingPicker').hidden = true; $('readingSelect').replaceChildren();
   $('resultContent').hidden = true; $('resultEmpty').hidden = false;
 }
@@ -449,13 +447,19 @@ function showReading(index) {
   $('recommendationOneText').textContent = copy.recommendations[0].text;
   $('recommendationTwoTitle').textContent = copy.recommendations[1].title;
   $('recommendationTwoText').textContent = copy.recommendations[1].text;
-  $('confidenceValue').textContent = percentage(data.confidence);
-  $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
-  $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
-  $('confidenceBar').style.width = `${data.confidence * 100}%`;
-  $('resultSource').textContent = reading.name; $('resultSource').title = reading.name;
-  if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
-  state.thumbnailUrl = URL.createObjectURL(reading.file); $('resultThumbnail').src = state.thumbnailUrl;
+  const hideConfidence = data.label === 'SIN PLÁTANO';
+  $('confidenceHeading').hidden = hideConfidence;
+  $('confidenceProgress').hidden = hideConfidence;
+  if (!hideConfidence) {
+    $('confidenceValue').textContent = percentage(data.confidence);
+    $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
+    $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
+    $('confidenceBar').style.width = `${data.confidence * 100}%`;
+  } else {
+    $('confidenceValue').textContent = '';
+    $('confidenceProgress').removeAttribute('aria-valuetext');
+    $('confidenceBar').style.width = '0%';
+  }
   if (!state.stream && !reading.fromCamera) {
     showPreview(reading.file, state.readings.length > 1 ? `MUESTRA ${index + 1} DE ${state.readings.length}` : 'MUESTRA ANALIZADA');
     $('selectionText').textContent = reading.name;
