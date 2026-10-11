@@ -23,7 +23,7 @@ function unlockVoice() {
 
 function alertExportResults(results, continuous) {
   const rejected = results.filter(result => result.label === 'NO APTO').length;
-  if (rejected) alertVoice.speak('Atención, producto no apto para exportación.', { continuous });
+  if (rejected) alertVoice.speak('Atención, plátano no apto para exportación.', { continuous });
 }
 const viewNames = { dashboard: 'Panel', capturar: 'Análisis', historial: 'Historial' };
 const state = {
@@ -449,10 +449,19 @@ function showReading(index) {
   $('recommendationOneText').textContent = copy.recommendations[0].text;
   $('recommendationTwoTitle').textContent = copy.recommendations[1].title;
   $('recommendationTwoText').textContent = copy.recommendations[1].text;
-  $('confidenceValue').textContent = percentage(data.confidence);
-  $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
-  $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
-  $('confidenceBar').style.width = `${data.confidence * 100}%`;
+  const hideConfidence = data.label === 'SIN PLÁTANO';
+  $('confidenceHeading').hidden = hideConfidence;
+  $('confidenceProgress').hidden = hideConfidence;
+  if (!hideConfidence) {
+    $('confidenceValue').textContent = percentage(data.confidence);
+    $('confidenceProgress').setAttribute('aria-valuenow', (data.confidence * 100).toFixed(1));
+    $('confidenceProgress').setAttribute('aria-valuetext', percentage(data.confidence));
+    $('confidenceBar').style.width = `${data.confidence * 100}%`;
+  } else {
+    $('confidenceValue').textContent = '';
+    $('confidenceProgress').removeAttribute('aria-valuetext');
+    $('confidenceBar').style.width = '0%';
+  }
   $('resultSource').textContent = reading.name; $('resultSource').title = reading.name;
   if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
   state.thumbnailUrl = URL.createObjectURL(reading.file); $('resultThumbnail').src = state.thumbnailUrl;
