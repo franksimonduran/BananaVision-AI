@@ -25,7 +25,7 @@ try {
   const page = await browser.newPage({ permissions: ['camera'] });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  const result = { label: 'APTO', confidence: .9, inference_time_ms: 104, threshold: .7, conclusive: true, predicted_class: 'APTO', probabilities: { APTO: .9, 'NO APTO': .1 }, recommendation: { message: 'Lectura.', destination: 'Destino', timing: 'Tiempo', storage: 'Manejo', action: 'Acción' } };
+  const result = { label: 'APTO', confidence: .9, inference_time_ms: 104, threshold: .7, conclusive: true, predicted_class: 'APTO', probabilities: { APTO: .9, 'NO APTO': .05, 'SIN PLÁTANO': .05 }, recommendation: { message: 'Lectura.', destination: 'Destino', timing: 'Tiempo', storage: 'Manejo', action: 'Acción' } };
   await page.route('**/health', route => route.fulfill({ json: { model_loaded: true, limits: { image_mb: 5, batch_files: 10, batch_mb: 20 } } }));
   let delay = 1000;
   let liveResult = result;
@@ -54,10 +54,11 @@ try {
   assert.equal(await page.locator('#voiceEnabled').isVisible(), true);
   const cameraBounds = await page.locator('#stage').boundingBox();
   delay = 0;
-  for (const label of ['NO APTO', 'NO CONCLUYENTE', 'APTO']) {
-    const confidence = label === 'NO CONCLUYENTE' ? .6 : .9;
-    const apto = label === 'NO APTO' ? 1 - confidence : confidence;
-    liveResult = { ...result, label, confidence, conclusive: label !== 'NO CONCLUYENTE', predicted_class: label === 'NO APTO' ? 'NO APTO' : 'APTO', probabilities: { APTO: apto, 'NO APTO': 1 - apto } };
+  for (const label of ['NO APTO', 'SIN PLÁTANO', 'APTO']) {
+    const confidence = label === 'SIN PLÁTANO' ? .6 : .9;
+    const remainder = (1 - confidence) / 2;
+    liveResult = { ...result, label, confidence, conclusive: true, predicted_class: label,
+      probabilities: Object.fromEntries(['APTO', 'NO APTO', 'SIN PLÁTANO'].map(key => [key, key === label ? confidence : remainder])) };
     await page.waitForFunction(label => document.getElementById('resultLabel').textContent === label, label);
     const bounds = await page.locator('#stage').boundingBox();
     assert.ok(Math.abs(bounds.height - cameraBounds.height) <= 1);
