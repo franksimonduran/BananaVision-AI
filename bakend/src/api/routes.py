@@ -59,10 +59,10 @@ def prepare(data):
 def infer(array, loader):
     try:
         predicted, confidence, elapsed, probabilities = loader.predict(array)
-        conclusive = confidence >= settings.CONFIDENCE_THRESHOLD
-        label = predicted if conclusive else 'NO CONCLUYENTE'
+        # Opción B: el modelo siempre devuelve exactamente una de sus tres clases.
+        label = predicted
         return PredictResponse(label=label, predicted_class=predicted, confidence=confidence,
-                               probabilities=probabilities, conclusive=conclusive,
+                               probabilities=probabilities, conclusive=True,
                                threshold=settings.CONFIDENCE_THRESHOLD,
                                recommendation=get_recommendation(label), inference_time_ms=elapsed)
     except Exception as exc:
@@ -81,6 +81,9 @@ async def persist_if_requested(request: Request, result: PredictResponse, raw: b
     account = svc.account(request.cookies.get("bv_session"))
     if account is None:
         raise HTTPException(401, "Inicia sesión para guardar los resultados en la nube.")
+    # "SIN PLÁTANO" is feedback for the camera, not a product inspection record.
+    if result.label == "SIN PLÁTANO":
+        return result
     if mode == "rejection" and result.label != "NO APTO":
         return result
     try:
